@@ -20,6 +20,6 @@ class BaseOperator(ABC):
             "'process_row' or 'process_partition' method"
         )
 
-    def process_partition(self, iterator: Iterable[Any]) -> Iterable[Any]:
+    def process_iter(self, iterator: Iterable[Any]) -> Iterable[Any]:
         """Process entire partition. Defaults to iterating over process_row."""
         return (self.process_row(row) for row in iterator)

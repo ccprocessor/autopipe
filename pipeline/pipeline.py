@@ -2,6 +2,8 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from pipeline.dataset.base import Dataset
 from pipeline.stage.base import BaseStage
+
+
 # from config
 
 
@@ -25,38 +27,12 @@ class Pipeline:
 
     def _build_stages(self) -> List[BaseStage]:
         """根据配置构建所有阶段实例"""
-        stages = []
-        for idx, stage_config in enumerate(self.config.stages):
-            # 获取阶段对应的 Operator 实例
-            operators = [
-                get_operator(op["name"], op.get("params"))
-                for op in stage_config["operators"]
-            ]
-
-            # 根据引擎类型选择 Stage 实现类
-            stage_class = self._get_stage_class(stage_config["engine"])
-
-            # 创建 Stage 实例
-            stage = stage_class(
-                dataset=self.dataset,
-                operators=operators,
-                engine_resources=self.config.engine_resources,
-                index=idx
-            )
-            stages.append(stage)
-        return stages
+        pass
 
     def _get_stage_class(self, engine_type: str) -> Type[BaseStage]:
         """根据引擎类型获取对应的 Stage 类（可扩展）"""
         # 示例映射关系，实际根据项目结构调整
-        engine_mapping = {
-            "spark.batch": SparkBatchStage,
-            "spark.stream": SparkStreamingStage,
-            "flink.batch": FlinkBatchStage
-        }
-        if engine_type not in engine_mapping:
-            raise ValueError(f"Unsupported engine type: {engine_type}")
-        return engine_mapping[engine_type]
+        pass
 
     def run(self, start_from: int = 0) -> None:
         """
