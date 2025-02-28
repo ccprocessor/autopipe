@@ -1,0 +1,18 @@
+# global params
+pipline_name: "test_pp"
+dataset_path: "s3://data-warehouse/samples/20250220/"
+output_path: "s3://data-warehouse/samples/export-test-v2/"
+
+# spark/ray config
+engine:
+    spark:
+        spark.executor.cores: 10
+        spark.executor.memory: "50g"
+
+# process
+process:
+    - length_filter:
+        min_length: 100
+    - space_ratio:
+        max_ratio: 0.1
+    - md5_dedup:
