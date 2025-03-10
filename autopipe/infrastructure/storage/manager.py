@@ -1,5 +1,5 @@
-from infrastructure.storage.base_storage import StorageConfig, StorageMode
-from infrastructure.storage.redis_storage import RedisStorage
+from autopipe.infrastructure.storage.base_storage import StorageConfig, StorageMode
+from autopipe.infrastructure.storage.redis_storage import RedisStorage
 
 
 def get_storage(config: StorageConfig):
