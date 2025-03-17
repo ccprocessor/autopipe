@@ -120,7 +120,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
 
     def _get_storage(self):
         """获取存储实例"""
-        with open("C:/Users/chenhaoling/PycharmProjects/autopipe/examples/test_config.json", "r") as f:
+        with open("./test_config.json", "r") as f:
             config_json = json.load(f)
             storage_config = redis_storage.RedisStorageConfig(
                 host=config_json["meta-storage"].get("host"),
@@ -410,7 +410,7 @@ class Operation4(BaseOperation):
 
 if __name__ == "__main__":
 
-    with open("C:/Users/chenhaoling/PycharmProjects/autopipe/examples/test_config.json", "r") as f:
+    with open("./test_config.json", "r") as f:
         config_json = json.load(f)
         storage_config = redis_storage.RedisStorageConfig(
             host=config_json["meta-storage"].get("host"),
