@@ -3,7 +3,8 @@ import time
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Dict, List, Optional, Type
 from enum import Enum
-from autopipe.infrastructure.storage import redis_storage
+from autopipe.config.base import ConfigLoader
+from autopipe.infrastructure.storage import get_storage
 from autopipe.infrastructure.io.base import IO
 import json
 
@@ -61,6 +62,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
             engine_type: EngineType,
             engine_config: Dict,
             operators: List,
+            meta_config,
             **kwargs
     ) -> 'PipelineStep':
         """工厂方法创建具体step实例"""
@@ -75,6 +77,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
             engine_type=engine_type,
             engine_config=engine_config,
             operators=operators,
+            meta_config=meta_config,
             **kwargs
         )
 
@@ -85,6 +88,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
                  engine_type: EngineType,
                  engine_config: Dict,
                  operators: List,
+                 meta_config,
                  is_last_step: bool = False):
         # 核心属性初始化
         self.pipeline_id = pipeline_id
@@ -105,7 +109,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
         # self.state = StepState.PENDING
         # self.input_count = 0
         self.is_last_step = is_last_step
-        self.storage = self._get_storage()
+        self.storage = self._get_storage(meta_config)
         self._check_interval = 3
 
         # 运行配置
@@ -118,17 +122,9 @@ class PipelineStep(ABC, metaclass=StepMeta):
         # 输入输出
         self.io = IO()
 
-    def _get_storage(self):
+    def _get_storage(self, meta_config):
         """获取存储实例"""
-        with open("./test_config.json", "r") as f:
-            config_json = json.load(f)
-            storage_config = redis_storage.RedisStorageConfig(
-                host=config_json["meta-storage"].get("host"),
-                port=config_json["meta-storage"].get("port"),
-                password=config_json["meta-storage"].get("password"),
-                mode="redis"
-            )
-            return redis_storage.RedisStorage(config=storage_config)
+        return get_storage(meta_config)
 
         # storage_config = redis_storage.RedisStorageConfig(
         #     host="10.140.84.62",
@@ -346,6 +342,7 @@ def run_step_in_process(
         engine_type: EngineType,
         engine_config: Dict,
         operators: List,
+        meta_config,
         is_last_step: bool,
 ):
     """子进程任务：创建并运行 PipelineStep 实例"""
@@ -358,6 +355,7 @@ def run_step_in_process(
             engine_type=engine_type,
             engine_config=engine_config,
             operators=operators,
+            meta_config=meta_config,
             is_last_step=is_last_step,
         )
         step.meta_registry()  # 元数据注册
@@ -410,15 +408,8 @@ class Operation4(BaseOperation):
 
 if __name__ == "__main__":
 
-    with open("./test_config.json", "r") as f:
-        config_json = json.load(f)
-        storage_config = redis_storage.RedisStorageConfig(
-            host=config_json["meta-storage"].get("host"),
-            port=config_json["meta-storage"].get("port"),
-            password=config_json["meta-storage"].get("password"),
-            mode="redis"
-        )
-    redis_client = redis_storage.RedisStorage(config=storage_config)
+    config = ConfigLoader("C:/Users/chenhaoling/PycharmProjects/autopipe/examples/test_config.json")
+    redis_client = get_storage(config.meta_storage)
 
     pipeline_meta = {
         "pipeline_id": "test_pipeline_202503111212_abcd",
@@ -446,6 +437,7 @@ if __name__ == "__main__":
             "engine_type": EngineType.LOCAL_CPU_BATCH,
             "engine_config": {"memory": "4g"},
             "operators": [op1, op2],
+            "meta_config": config.meta_storage,
             "is_last_step": False
         },
         {
@@ -455,6 +447,7 @@ if __name__ == "__main__":
             "engine_type": EngineType.LOCAL_CPU_BATCH,
             "engine_config": {"gpu_id": 0},
             "operators": [op3, op4],
+            "meta_config": config.meta_storage,
             "is_last_step": True
         }
     ]
