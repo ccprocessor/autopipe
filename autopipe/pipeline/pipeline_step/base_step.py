@@ -4,7 +4,7 @@ from abc import ABC, ABCMeta, abstractmethod
 from typing import Dict, List, Optional, Type
 from enum import Enum
 from autopipe.infrastructure.storage import redis_storage
-from autopipe.infrastructure.io import IO
+from autopipe.infrastructure.io.base import IO
 import json
 
 
