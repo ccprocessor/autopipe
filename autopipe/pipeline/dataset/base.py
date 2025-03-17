@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 
 
 class Dataset:
-    """Represents a dataset with input/output paths and stage metadata."""
+    """Represents a dataset with input/output paths and pipeline_step metadata."""
 
     def __init__(self, dataset_path: str) -> None:
         """
@@ -33,12 +33,12 @@ class Dataset:
 
     @property
     def stage_info(self) -> Dict[str, Any]:
-        """Copy of current stage metadata"""
+        """Copy of current pipeline_step metadata"""
         return self._stage_info.copy()  # 返回拷贝避免外部修改
 
     def update_stage_info(self, updates: Dict[str, Any], overwrite: bool = False) -> None:
         """
-        Update stage metadata
+        Update pipeline_step metadata
 
         Args:
             updates: Key-value pairs to add/update
