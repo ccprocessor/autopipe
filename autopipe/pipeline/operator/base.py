@@ -7,8 +7,7 @@ class BaseOperation(ABC):
     operator_name: str
     operator_type: str
 
-    def __init__(self, op_name: str, params_dict: dict = None):
-        self.op_name = op_name
+    def __init__(self, params_dict: dict = None):
         self.params_dict = params_dict or {}
 
     @abstractmethod

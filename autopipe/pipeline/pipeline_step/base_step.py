@@ -1,11 +1,13 @@
 import os.path
 import time
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Iterable
 from enum import Enum
 from autopipe.config.base import ConfigLoader
 from autopipe.infrastructure.storage import get_storage
 from autopipe.infrastructure.io.base import IO
+# from xinghe.dp.spark import SparkExecutor
+# from xinghe.spark import read_any_path, write_any_path
 import json
 
 
@@ -126,14 +128,6 @@ class PipelineStep(ABC, metaclass=StepMeta):
         """获取存储实例"""
         return get_storage(meta_config)
 
-        # storage_config = redis_storage.RedisStorageConfig(
-        #     host="10.140.84.62",
-        #     port=32379,
-        #     password="a33c347fa96bb24824d40ccd4d91de35aeb76d27",
-        #     mode="redis"
-        # )
-        # return redis_storage.RedisStorage(config=storage_config)
-
     @abstractmethod
     def meta_registry(self):
         pass
@@ -183,7 +177,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
     #     print(f"Writing to {self.output_data_path}")
 
     @abstractmethod
-    def process_row(self, data: dict):
+    def process_row(self, data: dict, ops: list):
         """具体数据处理逻辑（抽象方法）"""
         pass
 
@@ -280,13 +274,15 @@ class LocalCpuBatchStep(PipelineStep):
             'output_path': self.output_path,
             'output_queue': self.output_queue,
             'state': None,
-            'operators': [op.op_name for op in self.operators]
+            'operators': self.operators
         }
         self.storage.register_step(self.step_id, meta_dict)
         self.storage.register_step_progress(self.step_id)
 
     def process(self):
-        for op in self.operators:
+        ops = [get_operator(op['name'], op['params']) for op in self.operators]
+
+        for op in ops:
             op.resource_load()
 
         if not self.io.exists(self.input_path):
@@ -319,15 +315,58 @@ class LocalCpuBatchStep(PipelineStep):
                         data = json.loads(line)
                         # 执行操作链
 
-                        data = self.process_row(data)
+                        data = self.process_row(data, ops)
                         fout.write(json.dumps(data) + '\n')
                     except Exception as e:
                         print(f"处理失败: {input_path} | 错误: {e}")
 
-    def process_row(self, data: dict):
-        for op in self.operators:
+    def process_row(self, data: dict, ops: list):
+        for op in ops:
             data = op.process(data)
         return data
+
+
+# class SparkCPUBatchStep(PipelineStep):
+#     engine_type = EngineType.SPARK_CPU_BATCH
+#
+#     def meta_registry(self):
+#         meta_dict = {
+#             'id': self.step_id,
+#             'engine_type': self.engine_type.value,
+#             'trigger_event': self.trigger_event,
+#             'input_path': self.input_path,
+#             'input_queue': self.input_queue,
+#             'input_count': self.input_count,
+#             'output_path': self.output_path,
+#             'output_queue': self.output_queue,
+#             'state': None,
+#             'operators': [op.op_name for op in self.operators]
+#         }
+#         self.storage.register_step(self.step_id, meta_dict)
+#         self.storage.register_step_progress(self.step_id)
+#
+#     def process(self):
+#         for op in self.operators:
+#             op.resource_load()
+#
+#         if not self.io.exists(self.input_path):
+#             raise FileNotFoundError(f"输入目录不存在: {self.input_path}")
+#
+#         # 初始化 SparkExecutor
+#         executor = SparkExecutor(appName=self.step_id)
+#
+#         # 定义处理函数
+#         def process_data(data: Iterable[dict]) -> Iterable[dict]:
+#             for item in data:
+#                 yield {"processed": item}
+#
+#         # 执行任务
+#         executor.run([{"fn": process_data}])
+#
+#     def process_row(self, data: dict, ops: list):
+#         for op in ops:
+#             data = op.process(data)
+#         return data
 
 
 # code for test
@@ -366,9 +405,14 @@ def run_step_in_process(
 
 
 from autopipe.pipeline.operator.base import BaseOperation
+from autopipe.pipeline.operator.registry import register_operator, get_operator
 
 
+@register_operator
 class Operation1(BaseOperation):
+    operator_name = "op1"
+    operator_type = "default"
+
     def resource_load(self):
         print("load resource for op1")
 
@@ -377,7 +421,10 @@ class Operation1(BaseOperation):
         return data
 
 
+@register_operator
 class Operation2(BaseOperation):
+    operator_name = "op2"
+    operator_type = "default"
 
     def resource_load(self):
         print("load resource for op2")
@@ -387,7 +434,11 @@ class Operation2(BaseOperation):
         return data
 
 
+@register_operator
 class Operation3(BaseOperation):
+    operator_name = "op3"
+    operator_type = "default"
+
     def resource_load(self):
         print("load resource for op3")
 
@@ -396,7 +447,10 @@ class Operation3(BaseOperation):
         return data
 
 
+@register_operator
 class Operation4(BaseOperation):
+    operator_name = "op4"
+    operator_type = "default"
 
     def resource_load(self):
         print("load resource for op4")
@@ -424,11 +478,6 @@ if __name__ == "__main__":
 
     redis_client.register_pipeline(pipeline_id="test_pipeline_202503111212_abcd", pipeline_meta=pipeline_meta)
 
-    op1 = Operation1("op1")
-    op2 = Operation2("op2")
-    op3 = Operation3("op3")
-    op4 = Operation4("op4")
-
     steps_config = [
         {
             "pipeline_id": "test_pipeline_202503111212_abcd",
@@ -436,7 +485,7 @@ if __name__ == "__main__":
             "trigger_event": TriggerEvent.JOB_FINISHED.value,
             "engine_type": EngineType.LOCAL_CPU_BATCH,
             "engine_config": {"memory": "4g"},
-            "operators": [op1, op2],
+            "operators": [{"name": "op1", "params": {}}, {"name": "op2", "params": {}}],
             "meta_config": config.meta_storage,
             "is_last_step": False
         },
@@ -446,7 +495,7 @@ if __name__ == "__main__":
             "trigger_event": TriggerEvent.JOB_FINISHED.value,
             "engine_type": EngineType.LOCAL_CPU_BATCH,
             "engine_config": {"gpu_id": 0},
-            "operators": [op3, op4],
+            "operators": [{"name": "op3", "params": {}}, {"name": "op4", "params": {}}],
             "meta_config": config.meta_storage,
             "is_last_step": True
         }
