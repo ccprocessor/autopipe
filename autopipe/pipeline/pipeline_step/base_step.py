@@ -340,7 +340,7 @@ class SparkCPUBatchStep(PipelineStep):
             'output_path': self.output_path,
             'output_queue': self.output_queue,
             'state': None,
-            'operators': [op.op_name for op in self.operators]
+            'operators': self.operators
         }
         self.storage.register_step(self.step_id, meta_dict)
         self.storage.register_step_progress(self.step_id)
