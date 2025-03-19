@@ -493,6 +493,7 @@ import os
 import math
 from collections import Counter
 from typing import Callable, Dict, List
+import pandas as pd
 
 
 @register_operator
@@ -505,6 +506,12 @@ class CleanModelDemo(BaseOperation):
         ctypes.cdll.LoadLibrary("libgomp.so.1")
         self.clean_model = load_clean_model(
             "/share/chenhaojiong/notebooks/common_clean_2/pipline-dev/models/lgb_model_0925.pkl")
+
+    def predict_with_feature(self, feature_dict: dict) -> float:
+        feature_df = pd.json_normalize(feature_dict)
+        pred = self.clean_model.predict(feature_df)[0]
+
+        return pred
 
     def pred_clean_prob_fast(self, content: str) -> float:
         # 信息熵
