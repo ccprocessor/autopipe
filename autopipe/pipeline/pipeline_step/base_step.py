@@ -666,7 +666,7 @@ TEXT_EXCLUDE_SET = ALL_ITEM_SET - TEXT_INCLUDE_SET
 def get_concat_content(content_list: List[Dict]) -> str:
     content_block_list = []
     for content_item in content_list:
-        if content_item["type"] in TEXT_EXCLUDE_SET > 0:
+        if content_item["type"] in TEXT_EXCLUDE_SET:
             continue
         content_block_list.append(get_content_item_md(content_item))
     return "\n\n".join(content_block_list)
