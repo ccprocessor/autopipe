@@ -360,9 +360,11 @@ class SparkCPUBatchStep(PipelineStep):
         # 定义处理函数
         def _process(_iter):
             for d in _iter:
-                # yield self.process_row(d, ops)
-                d["op5"] = "test"
+                for op in ops:
+                    d = op.process(d)
                 yield d
+                # d["op5"] = "test"
+                # yield d
 
         # 定义处理函数
         pipeline = [
@@ -386,10 +388,10 @@ class SparkCPUBatchStep(PipelineStep):
         # 执行任务
         executor.run(pipeline)
 
-    def process_row(self, data: dict, ops: list):
-        for op in ops:
-            data = op.process(data)
-        return data
+    # def process_row(self, data: dict, ops: list):
+    #     for op in ops:
+    #         data = op.process(data)
+    #     return data
 
 
 # code for test
