@@ -32,12 +32,6 @@ class TriggerEvent(Enum):
     FILE_SUCCESS = "file_success"
 
 
-def process_row(data: dict, ops: list):
-    for op in ops:
-        data = op.process(data)
-    return data
-
-
 # PipelineStep 元类
 class StepMeta(ABCMeta):
     """自动注册子类的元类"""
@@ -168,19 +162,11 @@ class PipelineStep(ABC, metaclass=StepMeta):
 
         pass
 
-    # def read_data(self):
-    #     """读取输入数据"""
-    #     # 自动识别输入路径类型
-    #     if self.input_path.startswith("s3://"):
-    #         print(f"Reading from S3: {self.input_path}")
-    #     elif self.input_path.startswith("kafka://"):
-    #         print(f"Consuming from Kafka: {self.input_path}")
-    #     else:
-    #         print(f"Reading local file: {self.input_path}")
-
-    # def write_data(self):
-    #     """写入输出数据"""
-    #     print(f"Writing to {self.output_data_path}")
+    @staticmethod
+    def process_row(data: dict, ops: list):
+        for op in ops:
+            data = op.process(data)
+        return data
 
     def check_requirements(self) -> bool:
         """检查运行条件"""
@@ -316,7 +302,7 @@ class LocalCpuBatchStep(PipelineStep):
                         data = json.loads(line)
                         # 执行操作链
 
-                        data = process_row(data, ops)
+                        data = LocalCpuBatchStep.process_row(data, ops)
                         fout.write(json.dumps(data) + '\n')
                     except Exception as e:
                         print(f"处理失败: {input_path} | 错误: {e}")
@@ -356,7 +342,7 @@ class SparkCPUBatchStep(PipelineStep):
         # 定义处理函数
         def _process(_iter):
             for d in _iter:
-                d = process_row(d, ops)
+                d = SparkCPUBatchStep.process_row(d, ops)
                 yield d
                 # d["op5"] = "test"
                 # yield d
