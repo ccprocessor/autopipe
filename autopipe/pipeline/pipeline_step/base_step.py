@@ -32,6 +32,12 @@ class TriggerEvent(Enum):
     FILE_SUCCESS = "file_success"
 
 
+def process_row(data: dict, ops: list):
+    for op in ops:
+        data = op.process(data)
+    return data
+
+
 # PipelineStep 元类
 class StepMeta(ABCMeta):
     """自动注册子类的元类"""
@@ -176,11 +182,6 @@ class PipelineStep(ABC, metaclass=StepMeta):
     #     """写入输出数据"""
     #     print(f"Writing to {self.output_data_path}")
 
-    @abstractmethod
-    def process_row(self, data: dict, ops: list):
-        """具体数据处理逻辑（抽象方法）"""
-        pass
-
     def check_requirements(self) -> bool:
         """检查运行条件"""
         if self.step_order == 1:
@@ -315,15 +316,10 @@ class LocalCpuBatchStep(PipelineStep):
                         data = json.loads(line)
                         # 执行操作链
 
-                        data = self.process_row(data, ops)
+                        data = process_row(data, ops)
                         fout.write(json.dumps(data) + '\n')
                     except Exception as e:
                         print(f"处理失败: {input_path} | 错误: {e}")
-
-    def process_row(self, data: dict, ops: list):
-        for op in ops:
-            data = op.process(data)
-        return data
 
 
 class SparkCPUBatchStep(PipelineStep):
@@ -360,8 +356,7 @@ class SparkCPUBatchStep(PipelineStep):
         # 定义处理函数
         def _process(_iter):
             for d in _iter:
-                for op in ops:
-                    d = op.process(d)
+                d = process_row(d, ops)
                 yield d
                 # d["op5"] = "test"
                 # yield d
@@ -387,11 +382,6 @@ class SparkCPUBatchStep(PipelineStep):
 
         # 执行任务
         executor.run(pipeline)
-
-    def process_row(self, data: dict, ops: list):
-        for op in ops:
-            data = op.process(data)
-        return data
 
 
 # code for test
