@@ -6,8 +6,8 @@ from enum import Enum
 from autopipe.config.base import ConfigLoader
 from autopipe.infrastructure.storage import get_storage
 from autopipe.infrastructure.io.base import IO
-# from xinghe.dp.spark import SparkExecutor
-# from xinghe.spark import read_any_path, write_any_path
+from xinghe.dp.spark import SparkExecutor
+from xinghe.spark import read_any_path, write_any_path
 import json
 
 
@@ -204,10 +204,10 @@ class PipelineStep(ABC, metaclass=StepMeta):
 
     def get_input(self):
         """获取输入"""
-        if self.engine_type == EngineType.LOCAL_CPU_BATCH and self.step_order > 1:
+        if self.engine_type in (EngineType.LOCAL_CPU_BATCH, EngineType.SPARK_CPU_BATCH) and self.step_order > 1:
             input_path = self.storage.get_step_field(self.get_upstream_step_id(), "output_path")
             return input_path
-        elif self.engine_type == EngineType.LOCAL_CPU_BATCH and self.step_order == 1:
+        elif self.engine_type in (EngineType.LOCAL_CPU_BATCH, EngineType.SPARK_CPU_BATCH) and self.step_order == 1:
             input_path = self.storage.get_pipeline_field(self.pipeline_id, "input_path")
             return input_path
         else:
@@ -215,7 +215,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
 
     def create_output_path(self):
         """创建输出路径"""
-        if self.engine_type == EngineType.LOCAL_CPU_BATCH:
+        if self.engine_type in (EngineType.LOCAL_CPU_BATCH, EngineType.SPARK_CPU_BATCH):
             pipeline_output_path = self.storage.get_pipeline_field(self.pipeline_id, "output_path")
             if self.is_last_step:
                 output_path = os.path.join(pipeline_output_path, "final_output")
@@ -326,47 +326,68 @@ class LocalCpuBatchStep(PipelineStep):
         return data
 
 
-# class SparkCPUBatchStep(PipelineStep):
-#     engine_type = EngineType.SPARK_CPU_BATCH
-#
-#     def meta_registry(self):
-#         meta_dict = {
-#             'id': self.step_id,
-#             'engine_type': self.engine_type.value,
-#             'trigger_event': self.trigger_event,
-#             'input_path': self.input_path,
-#             'input_queue': self.input_queue,
-#             'input_count': self.input_count,
-#             'output_path': self.output_path,
-#             'output_queue': self.output_queue,
-#             'state': None,
-#             'operators': [op.op_name for op in self.operators]
-#         }
-#         self.storage.register_step(self.step_id, meta_dict)
-#         self.storage.register_step_progress(self.step_id)
-#
-#     def process(self):
-#         for op in self.operators:
-#             op.resource_load()
-#
-#         if not self.io.exists(self.input_path):
-#             raise FileNotFoundError(f"输入目录不存在: {self.input_path}")
-#
-#         # 初始化 SparkExecutor
-#         executor = SparkExecutor(appName=self.step_id)
-#
-#         # 定义处理函数
-#         def process_data(data: Iterable[dict]) -> Iterable[dict]:
-#             for item in data:
-#                 yield {"processed": item}
-#
-#         # 执行任务
-#         executor.run([{"fn": process_data}])
-#
-#     def process_row(self, data: dict, ops: list):
-#         for op in ops:
-#             data = op.process(data)
-#         return data
+class SparkCPUBatchStep(PipelineStep):
+    engine_type = EngineType.SPARK_CPU_BATCH
+
+    def meta_registry(self):
+        meta_dict = {
+            'id': self.step_id,
+            'engine_type': self.engine_type.value,
+            'trigger_event': self.trigger_event,
+            'input_path': self.input_path,
+            'input_queue': self.input_queue,
+            'input_count': self.input_count,
+            'output_path': self.output_path,
+            'output_queue': self.output_queue,
+            'state': None,
+            'operators': [op.op_name for op in self.operators]
+        }
+        self.storage.register_step(self.step_id, meta_dict)
+        self.storage.register_step_progress(self.step_id)
+
+    def process(self):
+        ops = [get_operator(op['name'], op['params']) for op in self.operators]
+
+        for op in ops:
+            op.resource_load()
+
+        if not self.io.exists(self.input_path):
+            raise FileNotFoundError(f"输入目录不存在: {self.input_path}")
+
+        # 初始化 SparkExecutor
+        executor = SparkExecutor(appName=self.step_id)
+
+        # 定义处理函数
+        def _process(_iter):
+            for d in _iter:
+                yield self.process_row(d, ops)
+
+        # 定义处理函数
+        pipeline = [
+            {
+                "fn": read_any_path,
+                "kwargs": {
+                    "path": self.input_path,
+                }
+            },
+            {
+                "fn": _process,
+            },
+            {
+                "fn": write_any_path,
+                "kwargs": {
+                    "path": self.output_path,
+                }
+            },
+        ]
+
+        # 执行任务
+        executor.run(pipeline)
+
+    def process_row(self, data: dict, ops: list):
+        for op in ops:
+            data = op.process(data)
+        return data
 
 
 # code for test
