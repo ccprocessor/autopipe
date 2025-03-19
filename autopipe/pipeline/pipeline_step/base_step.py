@@ -388,10 +388,10 @@ class SparkCPUBatchStep(PipelineStep):
         # 执行任务
         executor.run(pipeline)
 
-    # def process_row(self, data: dict, ops: list):
-    #     for op in ops:
-    #         data = op.process(data)
-    #     return data
+    def process_row(self, data: dict, ops: list):
+        for op in ops:
+            data = op.process(data)
+        return data
 
 
 # code for test
