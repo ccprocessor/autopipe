@@ -508,7 +508,7 @@ class CleanModelDemo(BaseOperation):
 
     def pred_clean_prob_fast(self, content: str) -> float:
         # 信息熵
-        entropy = stats_entropy(content)["entropy"]
+        entropy = stats_entropy(content)
 
         if entropy <= 1:
             return 0
