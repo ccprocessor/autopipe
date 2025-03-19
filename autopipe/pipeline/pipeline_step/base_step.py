@@ -356,7 +356,6 @@ class SparkCPUBatchStep(PipelineStep):
 
         # 初始化 SparkExecutor
         executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
-        executor.spark.sparkContext.addPyFile("/share/chenhaojiong/notebooks/common_clean_2/pipline-dev/repo/autopipe")
 
         # 定义处理函数
         def _process(_iter):
