@@ -360,7 +360,9 @@ class SparkCPUBatchStep(PipelineStep):
         # 定义处理函数
         def _process(_iter):
             for d in _iter:
-                yield self.process_row(d, ops)
+                # yield self.process_row(d, ops)
+                d["op5"] = "test"
+                yield d
 
         # 定义处理函数
         pipeline = [
