@@ -143,7 +143,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
                     print(f"{self.step_id} upstream step failed, stopping...")
                     self.set_state(StepState.STOPPED)
                     return
-            if self.engine_type == EngineType.LOCAL_CPU_BATCH:
+            if self.engine_type in (EngineType.LOCAL_CPU_BATCH, EngineType.SPARK_CPU_BATCH):
                 self.input_path = self.get_input()
                 print(f"{self.step_id} input path: {self.input_path}")
             print(f"{self.step_id} run")
