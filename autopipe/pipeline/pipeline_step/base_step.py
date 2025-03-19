@@ -351,8 +351,8 @@ class SparkCPUBatchStep(PipelineStep):
         for op in ops:
             op.resource_load()
 
-        if not self.io.exists(self.input_path):
-            raise FileNotFoundError(f"输入目录不存在: {self.input_path}")
+        # if not self.io.exists(self.input_path):
+        #     raise FileNotFoundError(f"输入目录不存在: {self.input_path}")
 
         # 初始化 SparkExecutor
         executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
