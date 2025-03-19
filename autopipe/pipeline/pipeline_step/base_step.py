@@ -355,7 +355,7 @@ class SparkCPUBatchStep(PipelineStep):
             raise FileNotFoundError(f"输入目录不存在: {self.input_path}")
 
         # 初始化 SparkExecutor
-        executor = SparkExecutor(appName=self.step_id)
+        executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
 
         # 定义处理函数
         def _process(_iter):
