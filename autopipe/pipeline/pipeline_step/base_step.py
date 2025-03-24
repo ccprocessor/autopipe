@@ -9,6 +9,8 @@ from autopipe.infrastructure.io.base import IO
 from xinghe.dp.spark import SparkExecutor
 from xinghe.spark import read_any_path, write_any_path
 import json
+from xinghe.io.kafka import KafkaWriter
+from xinghe.s3 import list_s3_objects
 
 
 class EngineType(Enum):
@@ -111,6 +113,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
         # self.state = StepState.PENDING
         # self.input_count = 0
         self.is_last_step = is_last_step
+        self.meta_config = meta_config
         self.storage = self._get_storage(meta_config)
         self._check_interval = 3
 
@@ -197,6 +200,13 @@ class PipelineStep(ABC, metaclass=StepMeta):
         elif self.engine_type in (EngineType.LOCAL_CPU_BATCH, EngineType.SPARK_CPU_BATCH) and self.step_order == 1:
             input_path = self.storage.get_pipeline_field(self.pipeline_id, "input_path")
             return input_path
+        # 逻辑还有问题
+        elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order > 1:
+            input_path = self.storage.get_step_field(self.get_upstream_step_id(), "output_path")
+            return input_path
+        elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order == 1:
+            input_path = self.init_input_queue()
+            return input_path
         else:
             return None
 
@@ -216,6 +226,22 @@ class PipelineStep(ABC, metaclass=StepMeta):
         """创建输出队列"""
         output_queue = f"kafka://{self.pipeline_id}_step_{self.step_order}_output"
         return output_queue
+
+    def init_input_queue(self):
+        """创建输入队列"""
+        input_queue = f"kafka://{self.pipeline_id}_step_0_output"
+        kafka_writer = KafkaWriter(input_queue)
+        pipeline_input_path = self.storage.get_pipeline_field(self.pipeline_id, "input_path")
+        input_count = 0
+        for fp in list_s3_objects(pipeline_input_path):
+            if fp.endswith(".jsonl") or fp.endswith(".jsonl.gz"):
+                kafka_writer.write(fp)
+                kafka_writer.flush()
+                input_count += 1
+
+        self.storage.update_step_field(self.step_id, "input_count", input_count)
+
+        return input_queue
 
     # 状态管理方法
     def set_state(self, state: StepState):
@@ -367,6 +393,107 @@ class SparkCPUBatchStep(PipelineStep):
         ]
 
         # 执行任务
+        executor.run(pipeline)
+
+
+SIZE_2G = 2 << 30
+
+
+class SparkCPUStreamStep(PipelineStep):
+    engine_type = EngineType.SPARK_CPU_STREAM
+
+    def meta_registry(self):
+        meta_dict = {
+            'id': self.step_id,
+            'engine_type': self.engine_type.value,
+            'trigger_event': self.trigger_event,
+            'input_path': self.input_path,
+            'input_queue': self.input_queue,
+            'input_count': self.input_count,
+            'output_path': self.output_path,
+            'output_queue': self.output_queue,
+            'state': None,
+            'operators': self.operators
+        }
+        self.storage.register_step(self.step_id, meta_dict)
+        self.storage.register_step_progress(self.step_id)
+
+    def process(self):
+        ops = [get_operator(op['name'], op['params']) for op in self.operators]
+
+        for op in ops:
+            op.resource_load()
+
+        from xinghe.s3 import (
+            S3DocWriter,
+            head_s3_object_with_retry,
+            is_s3_path,
+            put_s3_object_with_retry,
+            read_s3_rows,
+        )
+
+        def _process(_iter):
+            use_stream = SIZE_2G
+            output_queue_writer = KafkaWriter(self.output_queue)
+
+            for d in _iter:
+                file_meta_client = get_storage(self.meta_config)
+
+                input_file_path = d["file_path"]
+
+                if not is_s3_path(input_file_path):
+                    print(f"{input_file_path} is not s3 path")
+                    continue
+
+                input_head = head_s3_object_with_retry(input_file_path)
+                if not input_head:
+                    print(f"{input_file_path} is not exist")
+                    continue
+
+                file_name = input_file_path.split("/")[-1]
+                output_file_path = f"{self.output_path}/{file_name}"
+                output_head = head_s3_object_with_retry(output_file_path)
+
+                if output_head:
+                    print(f"{output_file_path} is exist")
+                    continue
+
+                writer = S3DocWriter(output_file_path)
+
+                for row in read_s3_rows(input_file_path, use_stream):
+                    try:
+                        new_row = SparkCPUBatchStep.process_row(row, ops)
+                        writer.write(new_row)
+                    except Exception as e:
+                        print(f"""处理失败: {input_file_path} | {row.get("track_id")} | 错误: {e}""")
+
+                writer.flush()
+                output_queue_writer.write({"file_path": output_file_path})
+                output_queue_writer.flush()
+                file_meta_client.update_step_progress()
+                step_progress = file_meta_client.get_step_progress(self.step_id)
+                if self.input_count == step_progress:
+                    file_meta_client.set_step_state(self.step_id, "success")
+
+        pipeline = [
+            {
+                "fn": read_any_path,
+                "kwargs": {
+                    "path": self.input_queue,
+                }
+            },
+            {
+                "fn": _process,
+            },
+            {
+                "fn": write_any_path,
+                "kwargs": {
+                    "path": self.output_queue,
+                }
+            },
+        ]
+
+        executor = SparkExecutor(config=config)
         executor.run(pipeline)
 
 

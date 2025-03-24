@@ -64,6 +64,15 @@ class RedisStorage(StorageBase):
             return step_meta[field]
         return None
 
+    def update_step_field(self, step_id: str, field: str, value: Any) -> bool:
+        step_meta = self.client.get(step_id)
+        if step_meta:
+            step_meta = json.loads(step_meta)
+            step_meta[field] = value
+            step_meta_str = json.dumps(step_meta, ensure_ascii=False)
+            return self.client.set(step_id, step_meta_str)
+        return False
+
     def get_pipeline_field(self, pipeline_id: str, field: str) -> Optional[Any]:
         pipeline_meta = self.client.get(pipeline_id)
         if pipeline_meta:
