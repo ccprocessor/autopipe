@@ -525,7 +525,7 @@ class SparkCPUStreamStep(PipelineStep):
             },
         ]
 
-        executor = SparkExecutor(config=config)
+        executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
         executor.run(pipeline)
 
 
