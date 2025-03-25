@@ -160,9 +160,6 @@ class PipelineStep(ABC, metaclass=StepMeta):
                 self.input_queue = self.get_input_queue()
                 self.storage.update_step_field(self.step_id, 'input_queue', self.input_queue)
 
-
-
-
             print(f"{self.step_id} run")
             self.set_state(StepState.RUNNING)
             self.process()
@@ -464,6 +461,11 @@ class SparkCPUStreamStep(PipelineStep):
             read_s3_rows,
         )
 
+        def add_author(_iter):
+            for d in _iter:
+                d["author"] = "test"
+                yield d
+
         def _process(_iter):
             use_stream = SIZE_2G
             output_queue_writer = KafkaWriter(self.output_queue)
@@ -515,7 +517,7 @@ class SparkCPUStreamStep(PipelineStep):
                 }
             },
             {
-                "fn": _process,
+                "fn": add_author,
             },
             {
                 "fn": write_any_path,
