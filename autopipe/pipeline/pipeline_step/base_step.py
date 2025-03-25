@@ -451,6 +451,11 @@ class SparkCPUStreamStep(PipelineStep):
 
     def process(self):
         ops = [get_operator(op['name'], op['params']) for op in self.operators]
+        output_queue = self.output_queue
+        meta_config = self.meta_config
+        output_path = self.output_path
+        step_id = self.step_id
+        input_count = self.input_count
 
         for op in ops:
             op.resource_load()
@@ -463,21 +468,21 @@ class SparkCPUStreamStep(PipelineStep):
             read_s3_rows,
         )
 
-        def add_author(_iter):
+        def add_author(_iter, test_value):
             for d in _iter:
-                d["author"] = "test"
+                d["author"] = test_value
                 yield d
 
         def add_test(d):
-            d["op_stream" + self.step_id] = "test"
+            d["op_stream" + step_id] = "test"
             return d
 
         def _process(_iter):
             use_stream = SIZE_2G
-            output_queue_writer = KafkaWriter(self.output_queue)
+            output_queue_writer = KafkaWriter(output_queue)
 
             for d in _iter:
-                file_meta_client = get_storage(self.meta_config)
+                file_meta_client = get_storage(meta_config)
 
                 input_file_path = d["file_path"]
 
@@ -491,7 +496,7 @@ class SparkCPUStreamStep(PipelineStep):
                     continue
 
                 file_name = input_file_path.split("/")[-1]
-                output_file_path = f"{self.output_path}/{file_name}"
+                output_file_path = f"{output_path}/{file_name}"
                 output_head = head_s3_object_with_retry(output_file_path)
 
                 if output_head:
@@ -502,8 +507,8 @@ class SparkCPUStreamStep(PipelineStep):
 
                 for row in read_s3_rows(input_file_path, use_stream):
                     try:
-                        # new_row = SparkCPUStreamStep.process_row(row, ops)
-                        new_row = add_test(row)
+                        new_row = SparkCPUStreamStep.process_row(row, ops)
+                        # new_row = add_test(row)
                         writer.write(new_row)
                     except Exception as e:
                         print(f"""处理失败: {input_file_path} | {row.get("track_id")} | 错误: {e}""")
@@ -512,9 +517,9 @@ class SparkCPUStreamStep(PipelineStep):
                 output_queue_writer.write({"file_path": output_file_path})
                 output_queue_writer.flush()
                 file_meta_client.update_step_progress()
-                step_progress = file_meta_client.get_step_progress(self.step_id)
-                if self.input_count == step_progress:
-                    file_meta_client.set_step_state(self.step_id, "success")
+                step_progress = file_meta_client.get_step_progress(step_id)
+                if input_count == step_progress:
+                    file_meta_client.set_step_state(step_id, "success")
 
                 d["file_path"] = output_file_path
                 yield d
@@ -527,7 +532,10 @@ class SparkCPUStreamStep(PipelineStep):
                 }
             },
             {
-                "fn": _process,
+                "fn": add_author,
+                "kwargs": {
+                    "test_value": "test_test",
+                }
             },
             {
                 "fn": write_any_path,
