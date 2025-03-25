@@ -262,7 +262,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
         iter1, iter2 = tee(
             (fp for fp in list_s3_objects(pipeline_input_path)
              if fp.endswith((".jsonl", ".jsonl.gz"))),
-            n=2
+            2
         )
 
         input_count = sum(1 for _ in iter1)
