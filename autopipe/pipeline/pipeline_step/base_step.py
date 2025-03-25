@@ -541,7 +541,7 @@ class SparkCPUStreamStep(PipelineStep):
             {
                 "fn": add_author,
                 "kwargs": {
-                    "test_value": "test_test_2",
+                    "value": "test_test_2",
                 }
             },
             {
