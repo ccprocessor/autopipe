@@ -546,6 +546,7 @@ class SparkCPUStreamStep(PipelineStep):
 
         print(self.input_queue)
         print(self.output_queue)
+        print("output_path: " + self.output_path)
 
         executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
         executor.run(pipeline)
