@@ -11,6 +11,7 @@ from xinghe.spark import read_any_path, write_any_path
 import json
 from xinghe.io.kafka import KafkaWriter
 from xinghe.s3 import list_s3_objects
+from itertools import tee
 
 
 class EngineType(Enum):
@@ -146,9 +147,22 @@ class PipelineStep(ABC, metaclass=StepMeta):
                     print(f"{self.step_id} upstream step failed, stopping...")
                     self.set_state(StepState.STOPPED)
                     return
+
             if self.engine_type in (EngineType.LOCAL_CPU_BATCH, EngineType.SPARK_CPU_BATCH):
-                self.input_path = self.get_input()
+                self.input_path = self.get_input_path()
+                self.storage.update_step_field(self.step_id, 'input_path', self.input_path)
                 print(f"{self.step_id} input path: {self.input_path}")
+
+            if self.engine_type in (EngineType.SPARK_CPU_BATCH,):
+                self.input_path = self.get_input_path()
+                self.storage.update_step_field(self.step_id, 'input_path', self.input_path)
+
+                self.input_queue = self.get_input_queue()
+                self.storage.update_step_field(self.step_id, 'input_queue', self.input_queue)
+
+
+
+
             print(f"{self.step_id} run")
             self.set_state(StepState.RUNNING)
             self.process()
@@ -192,23 +206,36 @@ class PipelineStep(ABC, metaclass=StepMeta):
         up_order = self.step_order - 1
         return f"{self.pipeline_id}_step_{up_order}" if up_order > 0 else None
 
-    def get_input(self):
-        """获取输入"""
+    def get_input_path(self):
+        """获取输入的路径"""
         if self.engine_type in (EngineType.LOCAL_CPU_BATCH, EngineType.SPARK_CPU_BATCH) and self.step_order > 1:
             input_path = self.storage.get_step_field(self.get_upstream_step_id(), "output_path")
             return input_path
         elif self.engine_type in (EngineType.LOCAL_CPU_BATCH, EngineType.SPARK_CPU_BATCH) and self.step_order == 1:
             input_path = self.storage.get_pipeline_field(self.pipeline_id, "input_path")
             return input_path
-        # 逻辑还有问题
+        # stream step的话，上游也是stream step时，input queue即为上游的output queue，input count为上游step的input count
+        # 上游是batch step时，需要初始化一个队列（input queue），input path是上游step的output path
         elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order > 1:
             input_path = self.storage.get_step_field(self.get_upstream_step_id(), "output_path")
             return input_path
         elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order == 1:
-            input_path = self.init_input_queue()
+            input_path = self.storage.get_pipeline_field(self.pipeline_id, "input_path")
             return input_path
         else:
             return None
+
+    def get_input_queue(self):
+        if self.engine_type in (EngineType.LOCAL_CPU_BATCH, EngineType.SPARK_CPU_BATCH):
+            return None
+        elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order == 0:
+            input_queue = self.init_input_queue()
+            return input_queue
+        elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order > 0:
+            input_queue = self.storage.get_step_field(self.get_upstream_step_id(), "output_queue")
+            upstream_input_count = self.storage.get_step_field(self.get_upstream_step_id(), "input_count")
+            self.storage.update_step_field(self.step_id, 'input_count', upstream_input_count)
+            return input_queue
 
     def create_output_path(self):
         """创建输出路径"""
@@ -232,14 +259,19 @@ class PipelineStep(ABC, metaclass=StepMeta):
         input_queue = f"kafka://{self.pipeline_id}_step_0_output"
         kafka_writer = KafkaWriter(input_queue)
         pipeline_input_path = self.storage.get_pipeline_field(self.pipeline_id, "input_path")
-        input_count = 0
-        for fp in list_s3_objects(pipeline_input_path):
-            if fp.endswith(".jsonl") or fp.endswith(".jsonl.gz"):
-                kafka_writer.write(fp)
-                kafka_writer.flush()
-                input_count += 1
 
+        iter1, iter2 = tee(
+            (fp for fp in list_s3_objects(pipeline_input_path)
+             if fp.endswith((".jsonl", ".jsonl.gz"))),
+            n=2
+        )
+
+        input_count = sum(1 for _ in iter1)
         self.storage.update_step_field(self.step_id, "input_count", input_count)
+
+        for fp in list_s3_objects(pipeline_input_path):
+            kafka_writer.write(fp)
+            kafka_writer.flush()
 
         return input_queue
 
