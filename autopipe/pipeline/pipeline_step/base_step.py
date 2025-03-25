@@ -456,15 +456,6 @@ class SparkCPUStreamStep(PipelineStep):
         self.storage.register_step_progress(self.step_id)
 
     def process(self):
-        ops = [get_operator(op['name'], op['params']) for op in self.operators]
-        output_queue = self.output_queue
-        meta_config = self.meta_config
-        output_path = self.output_path
-        step_id = self.step_id
-        input_count = self.input_count
-
-        for op in ops:
-            op.resource_load()
 
         from xinghe.s3 import (
             S3DocWriter,
@@ -484,9 +475,12 @@ class SparkCPUStreamStep(PipelineStep):
             d["op_stream" + step_id] = "test"
             return d
 
-        def _process(_iter):
+        def _process(_iter, step_id, meta_config, output_path, input_count, operators):
             use_stream = SIZE_2G
-            output_queue_writer = KafkaWriter(output_queue)
+            ops = [get_operator(op['name'], op['params']) for op in operators]
+
+            for op in ops:
+                op.resource_load()
 
             for d in _iter:
                 file_meta_client = get_storage(meta_config)
@@ -521,8 +515,6 @@ class SparkCPUStreamStep(PipelineStep):
                         print(f"""处理失败: {input_file_path} | {row.get("track_id")} | 错误: {e}""")
 
                 writer.flush()
-                output_queue_writer.write({"file_path": output_file_path})
-                output_queue_writer.flush()
                 file_meta_client.update_step_progress()
                 step_progress = file_meta_client.get_step_progress(step_id)
                 if input_count == step_progress:
@@ -539,9 +531,13 @@ class SparkCPUStreamStep(PipelineStep):
                 }
             },
             {
-                "fn": add_author,
+                "fn": _process,
                 "kwargs": {
-                    "value": "test_test_2",
+                    "step_id": self.step_id,
+                    "meta_config": self.meta_config,
+                    "output_path": self.output_path,
+                    "input_count": self.input_count,
+                    "operators": self.operators
                 }
             },
             {
