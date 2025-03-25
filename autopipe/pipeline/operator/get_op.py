@@ -1,6 +1,6 @@
 from typing import Type, Dict, Optional, Any
 from autopipe.pipeline.operator.registry import _REGISTRY
-from default_ops import *
+from autopipe.pipeline.operator.default_ops import *
 
 
 def get_operator(name: str, params_dict: Optional[Dict[str, Any]] = None) -> Any:
