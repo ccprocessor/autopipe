@@ -483,22 +483,22 @@ class SparkCPUStreamStep(PipelineStep):
 
                 input_file_path = d["file_path"]
 
-                if not is_s3_path(input_file_path):
-                    print(f"{input_file_path} is not s3 path")
-                    continue
-
-                input_head = head_s3_object_with_retry(input_file_path)
-                if not input_head:
-                    print(f"{input_file_path} is not exist")
-                    continue
+                # if not is_s3_path(input_file_path):
+                #     print(f"{input_file_path} is not s3 path")
+                #     continue
+                #
+                # input_head = head_s3_object_with_retry(input_file_path)
+                # if not input_head:
+                #     print(f"{input_file_path} is not exist")
+                #     continue
 
                 file_name = input_file_path.split("/")[-1]
                 output_file_path = f"{output_path}/{file_name}"
-                output_head = head_s3_object_with_retry(output_file_path)
+                # output_head = head_s3_object_with_retry(output_file_path)
 
-                if output_head:
-                    print(f"{output_file_path} is exist")
-                    continue
+                # if output_head:
+                #     print(f"{output_file_path} is exist")
+                #     continue
 
                 writer = S3DocWriter(output_file_path)
 
