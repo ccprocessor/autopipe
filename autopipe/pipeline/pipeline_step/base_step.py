@@ -468,7 +468,7 @@ class SparkCPUStreamStep(PipelineStep):
                 d["author"] = "test"
                 yield d
 
-        def _process(_iter):
+        def process_each(_iter):
             use_stream = SIZE_2G
             output_queue_writer = KafkaWriter(self.output_queue)
 
@@ -519,7 +519,7 @@ class SparkCPUStreamStep(PipelineStep):
                 }
             },
             {
-                "fn": add_author,
+                "fn": process_each,
             },
             {
                 "fn": write_any_path,
@@ -528,6 +528,9 @@ class SparkCPUStreamStep(PipelineStep):
                 }
             },
         ]
+
+        print(self.input_queue)
+        print(self.output_queue)
 
         executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
         executor.run(pipeline)
