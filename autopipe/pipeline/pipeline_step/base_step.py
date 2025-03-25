@@ -250,12 +250,18 @@ class PipelineStep(ABC, metaclass=StepMeta):
 
     def create_output_queue(self):
         """创建输出队列"""
-        output_queue = f"kafka://{self.pipeline_id}_step_{self.step_order}_output"
+        import time
+
+        timestamp = int(time.time())
+        output_queue = f"kafka://{self.pipeline_id}_step_{self.step_order}_output_{timestamp}"
         return output_queue
 
     def init_input_queue(self):
         """创建输入队列"""
-        input_queue = f"kafka://{self.pipeline_id}_step_0_output"
+        import time
+
+        timestamp = int(time.time())
+        input_queue = f"kafka://{self.pipeline_id}_step_0_output_{timestamp}"
         kafka_writer = KafkaWriter(input_queue)
         pipeline_input_path = self.storage.get_pipeline_field(self.pipeline_id, "input_path")
 
