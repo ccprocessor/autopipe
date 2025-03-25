@@ -1,5 +1,5 @@
 from typing import Type, Dict, Optional, Any
-from registry import _REGISTRY
+from autopipe.pipeline.operator.registry import _REGISTRY
 from default_ops import *
 
 
