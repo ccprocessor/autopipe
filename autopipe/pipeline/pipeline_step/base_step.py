@@ -589,7 +589,8 @@ def run_step_in_process(
 
 
 from autopipe.pipeline.operator.base import BaseOperation
-from autopipe.pipeline.operator.registry import register_operator, get_operator
+from autopipe.pipeline.operator.registry import register_operator
+from autopipe.pipeline.operator.get_op import get_operator
 
 
 @register_operator
