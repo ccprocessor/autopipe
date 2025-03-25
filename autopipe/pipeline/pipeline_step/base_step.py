@@ -471,11 +471,9 @@ class SparkCPUStreamStep(PipelineStep):
                 print("===============================process============================")
                 yield d
 
-        def add_test(d):
-            d["op_stream" + step_id] = "test"
-            return d
-
         def _process(_iter, step_id, meta_config, output_path, input_count, operators):
+            from autopipe.pipeline.operator.default_ops import *
+
             use_stream = SIZE_2G
             ops = [get_operator(op['name'], op['params']) for op in operators]
 
