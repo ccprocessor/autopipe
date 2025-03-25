@@ -269,7 +269,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
         self.storage.update_step_field(self.step_id, "input_count", input_count)
 
         for fp in list_s3_objects(pipeline_input_path):
-            kafka_writer.write(fp)
+            kafka_writer.write({"id": fp, "file_path": fp})
             kafka_writer.flush()
 
         return input_queue
