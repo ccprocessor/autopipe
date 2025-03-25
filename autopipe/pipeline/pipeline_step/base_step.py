@@ -464,6 +464,7 @@ class SparkCPUStreamStep(PipelineStep):
             put_s3_object_with_retry,
             read_s3_rows,
         )
+        from xinghe.utils.json_util import json_loads
 
         def add_author(_iter, value):
             for d in _iter:
@@ -504,7 +505,8 @@ class SparkCPUStreamStep(PipelineStep):
 
                 for row in read_s3_rows(input_file_path, use_stream):
                     try:
-                        row_dict = row.asDict()
+                        row_dict = json_loads(row.value)
+                        print("===========" + str(row_dict.keys()) + "==================")
                         new_row = SparkCPUStreamStep.process_row(row_dict, ops)
                         # new_row = add_test(row)
                         writer.write(new_row)
@@ -520,30 +522,50 @@ class SparkCPUStreamStep(PipelineStep):
                 d["file_path"] = output_file_path
                 yield d
 
-        pipeline = [
-            {
-                "fn": read_any_path,
-                "kwargs": {
-                    "path": self.input_queue,
-                }
-            },
-            {
-                "fn": _process,
-                "kwargs": {
-                    "step_id": self.step_id,
-                    "meta_config": self.meta_config,
-                    "output_path": self.output_path,
-                    "input_count": self.input_count,
-                    "operators": self.operators
-                }
-            },
-            {
-                "fn": write_any_path,
-                "kwargs": {
-                    "path": self.output_queue,
-                }
-            },
-        ]
+        if not self.is_last_step:
+            pipeline = [
+                {
+                    "fn": read_any_path,
+                    "kwargs": {
+                        "path": self.input_queue,
+                    }
+                },
+                {
+                    "fn": _process,
+                    "kwargs": {
+                        "step_id": self.step_id,
+                        "meta_config": self.meta_config,
+                        "output_path": self.output_path,
+                        "input_count": self.input_count,
+                        "operators": self.operators
+                    }
+                },
+                {
+                    "fn": write_any_path,
+                    "kwargs": {
+                        "path": self.output_queue,
+                    }
+                },
+            ]
+        else:
+            pipeline = [
+                {
+                    "fn": read_any_path,
+                    "kwargs": {
+                        "path": self.input_queue,
+                    }
+                },
+                {
+                    "fn": _process,
+                    "kwargs": {
+                        "step_id": self.step_id,
+                        "meta_config": self.meta_config,
+                        "output_path": self.output_path,
+                        "input_count": self.input_count,
+                        "operators": self.operators
+                    }
+                },
+            ]
 
         print(self.input_queue)
         print(self.output_queue)
