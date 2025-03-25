@@ -153,11 +153,13 @@ class PipelineStep(ABC, metaclass=StepMeta):
                 self.storage.update_step_field(self.step_id, 'input_path', self.input_path)
                 print(f"{self.step_id} input path: {self.input_path}")
 
-            if self.engine_type in (EngineType.SPARK_CPU_BATCH,):
+            if self.engine_type in (EngineType.SPARK_CPU_STREAM,):
                 self.input_path = self.get_input_path()
+                print(f"{self.step_id} input path: {self.input_path}")
                 self.storage.update_step_field(self.step_id, 'input_path', self.input_path)
 
                 self.input_queue = self.get_input_queue()
+                print(f"{self.step_id} input queue: {self.input_queue}")
                 self.storage.update_step_field(self.step_id, 'input_queue', self.input_queue)
 
             print(f"{self.step_id} run")
