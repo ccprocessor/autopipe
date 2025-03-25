@@ -502,8 +502,8 @@ class SparkCPUStreamStep(PipelineStep):
 
                 for row in read_s3_rows(input_file_path, use_stream):
                     try:
-                        # new_row = SparkCPUBatchStep.process_row(row, ops)
-                        new_row = add_test(row)
+                        new_row = SparkCPUStreamStep.process_row(row, ops)
+                        # new_row = add_test(row)
                         writer.write(new_row)
                     except Exception as e:
                         print(f"""处理失败: {input_file_path} | {row.get("track_id")} | 错误: {e}""")
