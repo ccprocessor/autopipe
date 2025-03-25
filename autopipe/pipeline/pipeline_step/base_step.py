@@ -474,9 +474,9 @@ class SparkCPUStreamStep(PipelineStep):
             read_s3_rows,
         )
 
-        def add_author(_iter):
+        def add_author(_iter, value):
             for d in _iter:
-                d["author"] = "test-test"
+                d["author"] = value
                 print("===============================process============================")
                 yield d
 
@@ -540,9 +540,9 @@ class SparkCPUStreamStep(PipelineStep):
             },
             {
                 "fn": add_author,
-                # "kwargs": {
-                #     "test_value": "test_test",
-                # }
+                "kwargs": {
+                    "test_value": "test_test_2",
+                }
             },
             {
                 "fn": write_any_path,
