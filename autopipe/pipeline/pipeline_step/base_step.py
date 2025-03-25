@@ -225,10 +225,10 @@ class PipelineStep(ABC, metaclass=StepMeta):
     def get_input_queue(self):
         if self.engine_type in (EngineType.LOCAL_CPU_BATCH, EngineType.SPARK_CPU_BATCH):
             return None
-        elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order == 0:
+        elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order == 1:
             input_queue = self.init_input_queue()
             return input_queue
-        elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order > 0:
+        elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order > 1:
             input_queue = self.storage.get_step_field(self.get_upstream_step_id(), "output_queue")
             upstream_input_count = self.storage.get_step_field(self.get_upstream_step_id(), "input_count")
             self.storage.update_step_field(self.step_id, 'input_count', upstream_input_count)
