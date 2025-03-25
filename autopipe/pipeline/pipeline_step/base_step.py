@@ -471,6 +471,7 @@ class SparkCPUStreamStep(PipelineStep):
         def add_author(_iter, test_value):
             for d in _iter:
                 d["author"] = test_value
+                print("===============================process============================")
                 yield d
 
         def add_test(d):
