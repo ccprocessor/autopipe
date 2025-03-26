@@ -472,7 +472,7 @@ class SparkCPUStreamStep(PipelineStep):
                 print("===============================process============================")
                 yield d
 
-        def _process(_iter, step_id, meta_config, output_path, input_count, operators):
+        def _process(_iter, step_id, meta_config, output_path, operators):
             use_stream = SIZE_2G
             ops = [get_operator(op['name'], op['params']) for op in operators]
 
@@ -564,7 +564,6 @@ class SparkCPUStreamStep(PipelineStep):
                         "step_id": self.step_id,
                         "meta_config": self.meta_config,
                         "output_path": self.output_path,
-                        "input_count": self.input_count,
                         "operators": self.operators
                     }
                 },
