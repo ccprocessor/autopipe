@@ -327,7 +327,7 @@ class LocalCpuBatchStep(PipelineStep):
             'operators': self.operators
         }
         self.storage.register_step(self.step_id, meta_dict)
-        self.storage.register_step_progress(self.step_id)
+        # self.storage.register_step_progress(self.step_id)
 
     def process(self):
         ops = [get_operator(op['name'], op['params']) for op in self.operators]
@@ -388,7 +388,7 @@ class SparkCPUBatchStep(PipelineStep):
             'operators': self.operators
         }
         self.storage.register_step(self.step_id, meta_dict)
-        self.storage.register_step_progress(self.step_id)
+        # self.storage.register_step_progress(self.step_id)
 
     def process(self):
         ops = [get_operator(op['name'], op['params']) for op in self.operators]
@@ -453,7 +453,7 @@ class SparkCPUStreamStep(PipelineStep):
             'operators': self.operators
         }
         self.storage.register_step(self.step_id, meta_dict)
-        self.storage.register_step_progress(self.step_id)
+        # self.storage.register_step_progress(self.step_id)
 
     def process(self):
 

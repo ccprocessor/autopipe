@@ -42,13 +42,12 @@ class RedisStorage(StorageBase):
         return False
 
     def get_step_progress(self, step_id: str) -> int:
-        progress = self.client.get(step_id + "_progress")
-        if progress:
-            return int(progress)
-        return 0
+        return self.client.scard(step_id + "_progress")
 
-    def update_step_progress(self, step_id: str) -> int:
-        return self.client.incr(step_id + "_progress")
+    def update_step_progress(self, step_id: str, file_path: str) -> int:
+        """向步骤进度集合添加文件路径"""
+        # 添加文件路径到集合（自动去重）
+        return self.client.sadd(step_id + "_progress", file_path)
 
     def get_step_state(self, step_id: str) -> Optional[str]:
         step_meta = self.client.get(step_id)
