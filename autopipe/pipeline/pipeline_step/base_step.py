@@ -517,6 +517,7 @@ class SparkCPUStreamStep(PipelineStep):
                 file_meta_client.update_step_progress(step_id, output_file_path)
                 step_progress = file_meta_client.get_step_progress(step_id)
                 if input_count == step_progress:
+                    print(f"current progress ================={input_count}======{step_progress}=====================")
                     file_meta_client.set_step_state(step_id, "success")
 
                 d["file_path"] = output_file_path
