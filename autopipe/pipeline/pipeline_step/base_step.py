@@ -514,7 +514,7 @@ class SparkCPUStreamStep(PipelineStep):
                         print(f"""处理失败: {input_file_path} | {row_dict.get("track_id")} | 错误: {e}""")
 
                 writer.flush()
-                file_meta_client.update_step_progress(step_id)
+                file_meta_client.update_step_progress(step_id, output_file_path)
                 step_progress = file_meta_client.get_step_progress(step_id)
                 if input_count == step_progress:
                     file_meta_client.set_step_state(step_id, "success")
