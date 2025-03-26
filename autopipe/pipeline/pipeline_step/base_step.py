@@ -274,7 +274,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
         input_count = sum(1 for _ in iter1)
         self.storage.update_step_field(self.step_id, "input_count", input_count)
 
-        for fp in list_s3_objects(pipeline_input_path):
+        for fp in iter2:
             kafka_writer.write({"id": fp, "file_path": fp})
             kafka_writer.flush()
 
