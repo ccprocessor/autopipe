@@ -4,6 +4,12 @@ from autopipe.infrastructure.storage import get_storage
 from autopipe.pipeline.base import EngineType
 from autopipe.pipeline.base import TriggerEvent
 from autopipe.pipeline.base import PipelineStep
+from autopipe.pipeline.operator.examples import (
+    Operation1,
+    Operation2,
+    Operation3,
+    Operation4,
+)  # 导入示例算子
 
 
 def run_step_in_process(
