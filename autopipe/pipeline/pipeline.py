@@ -1,7 +1,7 @@
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from autopipe.pipeline.dataset.base import Dataset
-from autopipe.pipeline.pipeline_step.base_step import PipelineStep
+from autopipe.pipeline.pipeline_step.base import PipelineStep
 
 
 # from config
@@ -9,4 +9,5 @@ from autopipe.pipeline.pipeline_step.base_step import PipelineStep
 
 class Pipeline:
     """协调数据处理流程的核心类"""
+
     pass
