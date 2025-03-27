@@ -51,8 +51,8 @@ class PipelineStep(ABC, metaclass=StepMeta):
             raise TypeError(
                 f"{subclass.__name__} must define 'engine_type' class attribute"
             )
-        if not isinstance(engine_type, EngineType):
-            raise TypeError(f"{subclass.__name__}.engine_type must be EngineType enum")
+        if not isinstance(engine_type, str):
+            raise TypeError(f"{subclass.__name__}.engine_type must be a string")
         cls._registry[engine_type] = subclass
 
     @classmethod
