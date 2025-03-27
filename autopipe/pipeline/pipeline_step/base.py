@@ -42,6 +42,9 @@ class StepMeta(ABCMeta):
 
 class PipelineStep(ABC, metaclass=StepMeta):
     _registry: Dict[EngineType, Type["PipelineStep"]] = {}
+    valid_engine_types = [
+        value for key, value in vars(EngineType).items() if not key.startswith("__")
+    ]
 
     @classmethod
     def register_subclass(cls, subclass: Type["PipelineStep"]):
@@ -51,8 +54,12 @@ class PipelineStep(ABC, metaclass=StepMeta):
             raise TypeError(
                 f"{subclass.__name__} must define 'engine_type' class attribute"
             )
-        if not isinstance(engine_type, str):
-            raise TypeError(f"{subclass.__name__}.engine_type must be a string")
+
+        if engine_type not in cls.valid_engine_types:
+            raise TypeError(
+                f"{subclass.__name__}.engine_type must be one of {cls.valid_engine_types}"
+            )
+
         cls._registry[engine_type] = subclass
 
     @classmethod
@@ -103,7 +110,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
         self.trigger_event = trigger_event
 
         # 引擎相关配置
-        if not isinstance(engine_type, EngineType):
+        if engine_type not in self.valid_engine_types:
             raise ValueError("Invalid engine type")
         self.engine_type = engine_type
         self.engine_config = engine_config
