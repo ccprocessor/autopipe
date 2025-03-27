@@ -8,9 +8,9 @@ from xinghe.s3 import (
 )
 from xinghe.utils.json_util import json_loads
 from autopipe.infrastructure.storage import get_storage
-from autopipe.pipeline.base import EngineType
+from autopipe.pipeline.pipeline_step.base import EngineType
 from autopipe.pipeline.operator.get_op import get_operator
-from autopipe.pipeline.base import PipelineStep
+from autopipe.pipeline.pipeline_step.base import PipelineStep
 
 SIZE_2G = 2 << 30
 
