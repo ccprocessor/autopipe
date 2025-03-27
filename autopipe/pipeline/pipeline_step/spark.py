@@ -8,7 +8,7 @@ from xinghe.s3 import (
 )
 from xinghe.utils.json_util import json_loads
 from autopipe.infrastructure.storage import get_storage
-from autopipe.pipeline.pipeline_step.base import EngineType
+from autopipe.pipeline.pipeline_step.base import EngineType, StepState
 from autopipe.pipeline.operator.get_op import get_operator
 from autopipe.pipeline.pipeline_step.base import PipelineStep
 
@@ -157,7 +157,7 @@ class SparkCPUStreamStep(PipelineStep):
                 )
 
                 if input_count == step_progress:
-                    file_meta_client.set_step_state(step_id, "success")
+                    file_meta_client.set_step_state(step_id, StepState.SUCCESS)
 
                 d["file_path"] = output_file_path
                 yield d

@@ -151,7 +151,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
             while not self.check_requirements():
                 time.sleep(self._check_interval)
                 print(f"{self.step_id} is waiting for requirements to be met...")
-                if self.get_upstream_step_state() == StepState.FAILED.value:
+                if self.get_upstream_step_state() == StepState.FAILED:
                     print(f"{self.step_id} upstream step failed, stopping...")
                     self.set_state(StepState.STOPPED)
                     return
@@ -205,15 +205,15 @@ class PipelineStep(ABC, metaclass=StepMeta):
         """检查运行条件"""
         if self.step_order == 1:
             return True
-        elif self.trigger_event == TriggerEvent.JOB_FINISHED.value:
+        elif self.trigger_event == TriggerEvent.JOB_FINISHED:
             upstream_step_state = self.storage.get_step_state(
                 self.get_upstream_step_id()
             )
-            if upstream_step_state == StepState.SUCCESS.value:
+            if upstream_step_state == StepState.SUCCESS:
                 return True
             else:
                 return False
-        elif self.trigger_event == TriggerEvent.FILE_SUCCESS.value:
+        elif self.trigger_event == TriggerEvent.FILE_SUCCESS:
             upstream_step_progress = self.get_upstream_step_progress()
             if upstream_step_progress > 0:
                 return True
@@ -334,8 +334,8 @@ class PipelineStep(ABC, metaclass=StepMeta):
 
     # 状态管理方法
     def set_state(self, state: StepState):
-        self.storage.set_step_state(self.step_id, state.value)
-        print(f"Step {self.step_id} state changed to {state.value}")
+        self.storage.set_step_state(self.step_id, state)
+        print(f"Step {self.step_id} state changed to {state}")
 
     def get_upstream_step_progress(self) -> Optional[int]:
         """获取处理进度"""
