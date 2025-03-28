@@ -57,7 +57,7 @@ class Pipeline:
         for step_order, step_config in enumerate(self.steps_config, start=1):
             step = PipelineStep.create(
                 pipeline_id=self.pipeline_id,
-                step_order=step_config.get("step_order"),
+                step_order=step_order,
                 trigger_event=step_config.get("trigger_event"),
                 engine_type=step_config.get("engine_type"),
                 engine_config=step_config.get("engine_config"),
