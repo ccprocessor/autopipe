@@ -86,7 +86,9 @@ class Pipeline:
 
     def run(self):
         """运行所有Step"""
-        self._is_running = True
+        self.storage.update_pipeline_field(
+            self.pipeline_id, "pipeline_state", "running"
+        )
         self.processes = []
 
         # 启动所有Step进程
@@ -107,11 +109,12 @@ class Pipeline:
     def _run_step(self, step: PipelineStep):
         """运行单个Step"""
         try:
-            step.meta_registry()
             step.run()
         except Exception as e:
             print(f"Step {step.step_id} failed: {str(e)}")
-            self._is_running = False
+            self.storage.update_pipeline_field(
+                self.pipeline_id, "pipeline_state", "failed"
+            )
             raise e
 
     def _monitor_steps(self):
@@ -131,11 +134,15 @@ class Pipeline:
 
             if any_failed:
                 print("Pipeline failed: one or more steps failed")
-                self._is_running = False
+                self.storage.update_pipeline_field(
+                    self.pipeline_id, "pipeline_state", "failed"
+                )
                 break
             elif all_success:
                 print("Pipeline completed successfully")
-                self._is_running = False
+                self.storage.update_pipeline_field(
+                    self.pipeline_id, "pipeline_state", "success"
+                )
                 break
 
             time.sleep(self._check_interval)
