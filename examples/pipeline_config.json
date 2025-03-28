@@ -1,0 +1,66 @@
+{
+    "pipeline_meta": {
+        "pipeline_name": "test_pipeline",
+        "pipeline_description": "test pipeline",
+        "pipeline_version": "0.1.0",
+        "pipeline_mode": "cluster"
+    },
+    "dataset":{
+        "input_path": "s3://data-warehouse/samples/20250221/",
+        "input_type": "data",
+        "output_path": "s3://data-warehouse/samples/20250326/output-20250319-stream-2/"
+    },
+    "steps": [
+        {
+            "trigger_event": "job_finished",
+            "engine_type": "spark-cpu-stream",
+            "engine_config": {
+                "spark_conf_name": "spark_4",
+                "spark.executorEnv.LD_LIBRARY_PATH": "/share/chenhaojiong/notebooks/lib",
+                "input_as_stream": true,
+                "maxOffsetsPerTrigger": "200000",
+                "trigger_interval": "5 seconds"
+            },
+            "operators": [
+                {
+                    "name": "op1",
+                    "params": {}
+                },
+                {
+                    "name": "op2",
+                    "params": {}
+                },
+                {
+                    "name": "clean_model_demo",
+                    "params": {}
+                }
+            ]
+        },
+        {
+            "trigger_event": "file_success",
+            "engine_type": "spark-cpu-stream",
+            "engine_config": {
+                "spark_conf_name": "spark_4",
+                "input_as_stream": true,
+                "maxOffsetsPerTrigger": "200000",
+                "trigger_interval": "5 seconds"
+            },
+            "operators": [
+                {
+                    "name": "op3",
+                    "params": {}
+                },
+                {
+                    "name": "op4",
+                    "params": {}
+                }
+            ]
+        }
+    ],
+    "meta_storage": {
+        "host": "10.140.84.62",
+        "port": 32379,
+        "password": "a33c347fa96bb24824d40ccd4d91de35aeb76d27",
+        "mode": "redis"
+    }
+} 
