@@ -32,7 +32,7 @@ class Pipeline:
         print(f"pipeline_id: {self.pipeline_id}")
 
         # storage
-        self.meta_config = config.get("meta_storage")
+        self.meta_config = config.meta_storage
         self.storage = get_storage(self.meta_config)
 
         # dataset
