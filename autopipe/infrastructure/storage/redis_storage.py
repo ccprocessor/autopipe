@@ -29,7 +29,10 @@ class RedisStorage(StorageBase):
         step_meta_str = json.dumps(step_meta, ensure_ascii=False)
         return self.client.set(step_id, step_meta_str)
 
-    def register_step_progress(self, step_id: str, ) -> bool:
+    def register_step_progress(
+        self,
+        step_id: str,
+    ) -> bool:
         return self.client.set(step_id + "_progress", 0)
 
     def set_step_state(self, step_id: str, state: str) -> bool:
@@ -78,3 +81,12 @@ class RedisStorage(StorageBase):
             pipeline_meta = json.loads(pipeline_meta)
             return pipeline_meta[field]
         return None
+
+    def update_pipeline_field(self, pipeline_id: str, field: str, value: Any) -> bool:
+        pipeline_meta = self.client.get(pipeline_id)
+        if pipeline_meta:
+            pipeline_meta = json.loads(pipeline_meta)
+            pipeline_meta[field] = value
+            pipeline_meta_str = json.dumps(pipeline_meta, ensure_ascii=False)
+            return self.client.set(pipeline_id, pipeline_meta_str)
+        return False

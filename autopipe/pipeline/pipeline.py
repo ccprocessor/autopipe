@@ -48,8 +48,8 @@ class Pipeline:
         self._check_interval = 3  # 状态检查间隔（秒）
         self._is_running = False
 
-        self.construct_steps()
         self.register_metadata()
+        self.construct_steps()
 
     def construct_steps(self):
         """构造pipeline的所有steps"""
@@ -68,6 +68,9 @@ class Pipeline:
             step.meta_registry()
             self.steps.append(step)
 
+        step_id_list = [step.step_id for step in self.steps]
+        self.storage.update_pipeline_field(self.pipeline_id, "steps", step_id_list)
+
     def register_metadata(self):
         """注册pipeline的元数据"""
 
@@ -78,8 +81,6 @@ class Pipeline:
             "input_path": self.input_path,
             "output_path": self.output_path,
         }
-        step_id_list = [step.step_id for step in self.steps]
-        pipeline_meta_dict["steps"] = step_id_list
 
         self.storage.register_pipeline(self.pipeline_id, pipeline_meta_dict)
 
