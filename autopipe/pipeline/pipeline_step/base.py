@@ -192,8 +192,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
 
             elif self.engine_type in (EngineType.SPARK_CPU_STREAM,):
                 self.process()
-                print(f"{self.step_id} success")
-                self.set_state(StepState.SUCCESS)
+                print(f"{self.step_id} completed")
 
         except Exception as e:
             print(f"{self.step_id} failed: {str(e)}")

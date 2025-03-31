@@ -103,7 +103,7 @@ class SparkCPUStreamStep(PipelineStep):
             while True:
                 time.sleep(6)  # 每6s检查一次
                 step_state = storage.get_step_state(step_id)
-                print(f"daemon check: {step_id} state: {step_state}")
+                # print(f"daemon check: {step_id} state: {step_state}")
 
                 if step_state == StepState.SUCCESS:
                     print(f"daemon check: {step_id} success")
