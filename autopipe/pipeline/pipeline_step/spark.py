@@ -103,9 +103,12 @@ class SparkCPUStreamStep(PipelineStep):
             while True:
                 time.sleep(6)  # 每6s检查一次
                 step_state = storage.get_step_state(step_id)
+                print(f"daemon check: {step_id} state: {step_state}")
 
                 if step_state == StepState.SUCCESS:
-                    executor.spark.stop()  # 优雅停止SparkContext
+                    print(f"daemon check: {step_id} success")
+                    executor.spark.stop()  # 停止SparkContext
+                    print(f"daemon stop spark context")
                     break
 
         def add_author(_iter, value):
