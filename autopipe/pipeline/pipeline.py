@@ -128,7 +128,8 @@ class Pipeline:
     def _monitor_steps(self):
         """监控所有Step的状态"""
         while (
-            self.storage.get_pipeline_state(self.pipeline_id) == PipelineState.RUNNING
+            self.storage.get_pipeline_field(self.pipeline_id, "pipeline_state")
+            == PipelineState.RUNNING
         ):
             all_success = True
             any_failed = False
