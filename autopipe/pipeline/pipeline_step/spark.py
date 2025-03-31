@@ -221,6 +221,9 @@ class SparkCPUStreamStep(PipelineStep):
         print(self.output_queue)
         print("output_path: " + self.output_path)
 
+        # 创建executor
+        executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
+
         # 启动独立线程监控进度
         shutdown_thread = threading.Thread(
             target=_safe_shutdown, args=(executor, self.step_id, self.storage)
@@ -229,5 +232,4 @@ class SparkCPUStreamStep(PipelineStep):
         shutdown_thread.start()
 
         # 启动SparkExecutor
-        executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
         executor.run(pipeline)
