@@ -12,6 +12,9 @@ from autopipe.pipeline.pipeline_step.base import EngineType, StepState
 from autopipe.pipeline.operator.get_op import get_operator
 from autopipe.pipeline.pipeline_step.base import PipelineStep
 
+import time
+import threading
+
 SIZE_2G = 2 << 30
 
 
@@ -95,6 +98,16 @@ class SparkCPUStreamStep(PipelineStep):
         # self.storage.register_step_progress(self.step_id)
 
     def process(self):
+        def _safe_shutdown(executor, step_id, storage):
+            """安全关闭Spark Streaming的轮询检查"""
+            while True:
+                time.sleep(6)  # 每6s检查一次
+                step_state = storage.get_step_state(step_id)
+
+                if step_state == StepState.SUCCESS:
+                    executor.spark.stop()  # 优雅停止SparkContext
+                    break
+
         def add_author(_iter, value):
             for d in _iter:
                 d["author"] = value
@@ -137,9 +150,7 @@ class SparkCPUStreamStep(PipelineStep):
                 for row in read_s3_rows(input_file_path, use_stream):
                     try:
                         row_dict = json_loads(row.value)
-                        print(
-                            "===========" + str(row_dict.keys()) + "=================="
-                        )
+
                         new_row = SparkCPUStreamStep.process_row(row_dict, ops)
                         # new_row = add_test(row)
                         writer.write(new_row)
@@ -152,9 +163,6 @@ class SparkCPUStreamStep(PipelineStep):
                 file_meta_client.update_step_progress(step_id, output_file_path)
                 input_count = file_meta_client.get_step_field(step_id, "input_count")
                 step_progress = file_meta_client.get_step_progress(step_id)
-                print(
-                    f"current progress ================={input_count}======{step_progress}====================="
-                )
 
                 if input_count == step_progress:
                     file_meta_client.set_step_state(step_id, StepState.SUCCESS)
@@ -210,5 +218,13 @@ class SparkCPUStreamStep(PipelineStep):
         print(self.output_queue)
         print("output_path: " + self.output_path)
 
+        # 启动独立线程监控进度
+        shutdown_thread = threading.Thread(
+            target=_safe_shutdown, args=(executor, self.step_id, self.storage)
+        )
+        shutdown_thread.daemon = True
+        shutdown_thread.start()
+
+        # 启动SparkExecutor
         executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
         executor.run(pipeline)

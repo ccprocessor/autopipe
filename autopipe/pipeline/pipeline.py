@@ -9,6 +9,14 @@ from autopipe.pipeline.pipeline_step.base import StepState
 from autopipe.infrastructure.storage import get_storage
 
 
+class PipelineState:
+    PENDING = "pending"
+    RUNNING = "running"
+    STOPPED = "stopped"
+    SUCCESS = "success"
+    FAILED = "failed"
+
+
 def human_readable_id():
     date_part = datetime.now().strftime("%y%m%d")
     char_pool = string.ascii_uppercase + string.digits
@@ -87,7 +95,7 @@ class Pipeline:
     def run(self):
         """运行所有Step"""
         self.storage.update_pipeline_field(
-            self.pipeline_id, "pipeline_state", "running"
+            self.pipeline_id, "pipeline_state", PipelineState.RUNNING
         )
         self.processes = []
 
@@ -113,13 +121,15 @@ class Pipeline:
         except Exception as e:
             print(f"Step {step.step_id} failed: {str(e)}")
             self.storage.update_pipeline_field(
-                self.pipeline_id, "pipeline_state", "failed"
+                self.pipeline_id, "pipeline_state", PipelineState.FAILED
             )
             raise e
 
     def _monitor_steps(self):
         """监控所有Step的状态"""
-        while self._is_running:
+        while (
+            self.storage.get_pipeline_state(self.pipeline_id) == PipelineState.RUNNING
+        ):
             all_success = True
             any_failed = False
 
