@@ -7,6 +7,7 @@ import time
 from multiprocessing import Process
 from autopipe.pipeline.pipeline_step.base import StepState
 from autopipe.infrastructure.storage import get_storage
+from loguru import logger
 
 
 class PipelineState:
@@ -114,15 +115,15 @@ class Pipeline:
         for proc in self.processes:
             proc.join()
         monitor_proc.join()
-        print(f"Pipeline {self.pipeline_id} running completed")
+        logger.info(f"Pipeline {self.pipeline_id} running completed")
 
     def _run_step(self, step: PipelineStep):
         """运行单个Step"""
         try:
             step.run()
-            print(f"Step {step.step_id} completed")
+            logger.info(f"Step {step.step_id} completed")
         except Exception as e:
-            print(f"Step {step.step_id} failed: {str(e)}")
+            logger.info(f"Step {step.step_id} failed: {str(e)}")
             self.storage.update_pipeline_field(
                 self.pipeline_id, "pipeline_state", PipelineState.FAILED
             )
@@ -147,20 +148,20 @@ class Pipeline:
                     all_success = False
 
             if any_failed:
-                print("Pipeline failed: one or more steps failed")
+                logger.info("Pipeline failed: one or more steps failed")
                 self.storage.update_pipeline_field(
                     self.pipeline_id, "pipeline_state", "failed"
                 )
                 break
             elif all_success:
-                print("Pipeline completed successfully")
+                logger.info("Pipeline completed successfully")
                 self.storage.update_pipeline_field(
                     self.pipeline_id, "pipeline_state", "success"
                 )
                 break
 
             time.sleep(self._check_interval)
-        print("Pipeline completed")
+        logger.info("Pipeline completed")
 
     def stop(self):
         """停止所有Step"""
