@@ -7,6 +7,7 @@ from autopipe.infrastructure.io.base import IO
 from xinghe.io.kafka import KafkaWriter
 from xinghe.s3 import list_s3_objects
 from itertools import tee
+from loguru import logger
 
 
 class EngineType:
@@ -150,9 +151,9 @@ class Step(ABC, metaclass=StepMeta):
             self.set_state(StepState.PENDING)
             while not self.check_requirements():
                 time.sleep(self._check_interval)
-                print(f"{self.step_id} is waiting for requirements to be met...")
+                logger.info(f"{self.step_id} is waiting for requirements to be met...")
                 if self.get_upstream_step_state() == StepState.FAILED:
-                    print(f"{self.step_id} upstream step failed, stopping...")
+                    logger.error(f"{self.step_id} upstream step failed, stopping...")
                     self.set_state(StepState.STOPPED)
                     return
 
@@ -164,22 +165,22 @@ class Step(ABC, metaclass=StepMeta):
                 self.storage.update_step_field(
                     self.step_id, "input_path", self.input_path
                 )
-                print(f"{self.step_id} input path: {self.input_path}")
+                logger.info(f"{self.step_id} input path: {self.input_path}")
 
             if self.engine_type in (EngineType.SPARK_CPU_STREAM,):
                 self.input_path = self.get_input_path()
-                print(f"{self.step_id} input path: {self.input_path}")
+                logger.info(f"{self.step_id} input path: {self.input_path}")
                 self.storage.update_step_field(
                     self.step_id, "input_path", self.input_path
                 )
 
                 self.input_queue = self.get_input_queue()
-                print(f"{self.step_id} input queue: {self.input_queue}")
+                logger.info(f"{self.step_id} input queue: {self.input_queue}")
                 self.storage.update_step_field(
                     self.step_id, "input_queue", self.input_queue
                 )
 
-            print(f"{self.step_id} run")
+            logger.info(f"{self.step_id} run")
             self.set_state(StepState.RUNNING)
 
             if self.engine_type in (
@@ -187,15 +188,15 @@ class Step(ABC, metaclass=StepMeta):
                 EngineType.SPARK_CPU_BATCH,
             ):
                 self.process()
-                print(f"{self.step_id} success")
                 self.set_state(StepState.SUCCESS)
+                logger.info(f"{self.step_id} success")
 
             elif self.engine_type in (EngineType.SPARK_CPU_STREAM,):
                 self.process()
-                print(f"{self.step_id} completed")
+                logger.info(f"{self.step_id} completed")
 
         except Exception as e:
-            print(f"{self.step_id} failed: {str(e)}")
+            logger.error(f"{self.step_id} failed: {str(e)}")
             self.set_state(StepState.FAILED)
             raise e
 
@@ -345,7 +346,7 @@ class Step(ABC, metaclass=StepMeta):
     # 状态管理方法
     def set_state(self, state: StepState):
         self.storage.set_step_state(self.step_id, state)
-        print(f"Step {self.step_id} state changed to {state}")
+        logger.info(f"Step {self.step_id} state changed to {state}")
 
     def get_upstream_step_progress(self) -> Optional[int]:
         """获取处理进度"""

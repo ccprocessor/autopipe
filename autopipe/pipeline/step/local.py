@@ -2,6 +2,7 @@ import os.path
 from autopipe.pipeline.step.base import Step, EngineType
 from autopipe.pipeline.operator.get_op import get_operator
 from xinghe.utils.json_util import json_loads, json_dumps
+from loguru import logger
 
 
 class LocalCpuBatchStep(Step):
@@ -33,12 +34,12 @@ class LocalCpuBatchStep(Step):
             raise FileNotFoundError(f"输入目录不存在: {self.input_path}")
 
         if not self.io.exists(self.output_path):
-            print(f"创建输出目录: {self.output_path}")
+            logger.info(f"创建输出目录: {self.output_path}")
             os.mkdir(self.output_path)
 
         # 遍历文件
         for filename in self.io.list_dir(self.input_path):
-            print(filename)
+            logger.info(filename)
             if not filename.endswith((".jsonl", ".jsonl.gz")):
                 continue
 
@@ -65,4 +66,4 @@ class LocalCpuBatchStep(Step):
                         data = LocalCpuBatchStep.process_row(data, ops)
                         fout.write(json_dumps(data) + "\n")
                     except Exception as e:
-                        print(f"处理失败: {input_path} | 错误: {e}")
+                        logger.error(f"处理失败: {input_path} | 错误: {e}")

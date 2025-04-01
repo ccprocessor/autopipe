@@ -11,6 +11,7 @@ from autopipe.infrastructure.storage import get_storage
 from autopipe.pipeline.step.base import EngineType, StepState
 from autopipe.pipeline.operator.get_op import get_operator
 from autopipe.pipeline.step.base import Step
+from loguru import logger
 
 import time
 import threading
@@ -106,20 +107,14 @@ class SparkCPUStreamStep(Step):
                 # print(f"daemon check: {step_id} state: {step_state}")
 
                 if step_state == StepState.SUCCESS:
-                    print(f"daemon check: {step_id} success")
+                    logger.info(f"daemon check: {step_id} success")
                     executor.spark.stop()  # 停止SparkContext
-                    print(f"daemon stop spark context")
+                    logger.info(f"daemon stop {step_id} spark context")
                     break
 
-        def add_author(_iter, value):
-            for d in _iter:
-                d["author"] = value
-                print(
-                    "===============================process============================"
-                )
-                yield d
-
         def _process(_iter, step_id, meta_config, output_path, operators):
+            from loguru import logger
+
             use_stream = SIZE_2G
             ops = [get_operator(op["name"], op["params"]) for op in operators]
 
@@ -132,12 +127,12 @@ class SparkCPUStreamStep(Step):
                 input_file_path = d["file_path"]
 
                 if not is_s3_path(input_file_path):
-                    print(f"{input_file_path} is not s3 path")
+                    logger.info(f"{input_file_path} is not s3 path")
                     continue
 
                 input_head = head_s3_object_with_retry(input_file_path)
                 if not input_head:
-                    print(f"{input_file_path} is not exist")
+                    logger.info(f"{input_file_path} is not exist")
                     continue
 
                 file_name = input_file_path.split("/")[-1]
@@ -145,7 +140,7 @@ class SparkCPUStreamStep(Step):
                 output_head = head_s3_object_with_retry(output_file_path)
 
                 if output_head:
-                    print(f"{output_file_path} is exist")
+                    logger.info(f"{output_file_path} is exist")
                     continue
 
                 writer = S3DocWriter(output_file_path)
@@ -158,7 +153,7 @@ class SparkCPUStreamStep(Step):
                         # new_row = add_test(row)
                         writer.write(new_row)
                     except Exception as e:
-                        print(
+                        logger.error(
                             f"""处理失败: {input_file_path} | {row_dict.get("track_id")} | 错误: {e}"""
                         )
 
@@ -217,9 +212,9 @@ class SparkCPUStreamStep(Step):
                 },
             ]
 
-        print(self.input_queue)
-        print(self.output_queue)
-        print("output_path: " + self.output_path)
+        logger.info(self.input_queue)
+        logger.info(self.output_queue)
+        logger.info("output_path: " + self.output_path)
 
         # 创建executor
         executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
