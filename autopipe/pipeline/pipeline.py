@@ -87,6 +87,7 @@ class Pipeline:
             "pipeline_name": self.pipeline_name,
             "pipeline_state": None,
             "input_path": self.input_path,
+            "input_type": self.input_type,
             "output_path": self.output_path,
         }
 
@@ -113,11 +114,13 @@ class Pipeline:
         for proc in self.processes:
             proc.join()
         monitor_proc.join()
+        print(f"Pipeline {self.pipeline_id} running completed")
 
     def _run_step(self, step: PipelineStep):
         """运行单个Step"""
         try:
             step.run()
+            print(f"Step {step.step_id} completed")
         except Exception as e:
             print(f"Step {step.step_id} failed: {str(e)}")
             self.storage.update_pipeline_field(
@@ -157,6 +160,7 @@ class Pipeline:
                 break
 
             time.sleep(self._check_interval)
+        print("Pipeline completed")
 
     def stop(self):
         """停止所有Step"""
