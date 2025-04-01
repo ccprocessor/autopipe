@@ -37,17 +37,17 @@ class StepMeta(ABCMeta):
     def __init__(cls, name, bases, attrs):
         super().__init__(name, bases, attrs)
         if hasattr(cls, "engine_type"):
-            PipelineStep.register_subclass(cls)
+            Step.register_subclass(cls)
 
 
-class PipelineStep(ABC, metaclass=StepMeta):
-    _registry: Dict[EngineType, Type["PipelineStep"]] = {}
+class Step(ABC, metaclass=StepMeta):
+    _registry: Dict[EngineType, Type["Step"]] = {}
     valid_engine_types = [
         value for key, value in vars(EngineType).items() if not key.startswith("__")
     ]
 
     @classmethod
-    def register_subclass(cls, subclass: Type["PipelineStep"]):
+    def register_subclass(cls, subclass: Type["Step"]):
         """注册子类到工厂"""
         engine_type = getattr(subclass, "engine_type", None)
         if engine_type is None:
@@ -73,7 +73,7 @@ class PipelineStep(ABC, metaclass=StepMeta):
         operators: List,
         meta_config,
         **kwargs,
-    ) -> "PipelineStep":
+    ) -> "Step":
         """工厂方法创建具体step实例"""
         if engine_type not in cls._registry:
             raise ValueError(

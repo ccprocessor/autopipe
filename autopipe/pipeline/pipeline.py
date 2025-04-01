@@ -2,10 +2,10 @@ from typing import Dict, List
 from datetime import datetime
 import string
 import random
-from autopipe.pipeline.pipeline_step.base import PipelineStep
+from autopipe.pipeline.step.base import Step
 import time
 from multiprocessing import Process
-from autopipe.pipeline.pipeline_step.base import StepState
+from autopipe.pipeline.step.base import StepState
 from autopipe.infrastructure.storage import get_storage
 from loguru import logger
 
@@ -52,7 +52,7 @@ class Pipeline:
 
         # steps
         self.steps_config = config.get("steps")
-        self.steps: List[PipelineStep] = []
+        self.steps: List[Step] = []
         self.processes: List[Process] = []
         self._check_interval = 3  # 状态检查间隔（秒）
         self._is_running = False
@@ -64,7 +64,7 @@ class Pipeline:
         """构造pipeline的所有steps"""
         steps_num = len(self.steps_config)
         for step_order, step_config in enumerate(self.steps_config, start=1):
-            step = PipelineStep.create(
+            step = Step.create(
                 pipeline_id=self.pipeline_id,
                 step_order=step_order,
                 trigger_event=step_config.get("trigger_event"),
@@ -117,7 +117,7 @@ class Pipeline:
         monitor_proc.join()
         logger.info(f"Pipeline {self.pipeline_id} running completed")
 
-    def _run_step(self, step: PipelineStep):
+    def _run_step(self, step: Step):
         """运行单个Step"""
         try:
             step.run()

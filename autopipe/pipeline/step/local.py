@@ -1,10 +1,10 @@
 import os.path
-from autopipe.pipeline.pipeline_step.base import PipelineStep, EngineType
+from autopipe.pipeline.step.base import Step, EngineType
 from autopipe.pipeline.operator.get_op import get_operator
 from xinghe.utils.json_util import json_loads, json_dumps
 
 
-class LocalCpuBatchStep(PipelineStep):
+class LocalCpuBatchStep(Step):
     engine_type = EngineType.LOCAL_CPU_BATCH
 
     def meta_registry(self):

@@ -8,9 +8,9 @@ from xinghe.s3 import (
 )
 from xinghe.utils.json_util import json_loads
 from autopipe.infrastructure.storage import get_storage
-from autopipe.pipeline.pipeline_step.base import EngineType, StepState
+from autopipe.pipeline.step.base import EngineType, StepState
 from autopipe.pipeline.operator.get_op import get_operator
-from autopipe.pipeline.pipeline_step.base import PipelineStep
+from autopipe.pipeline.step.base import Step
 
 import time
 import threading
@@ -18,7 +18,7 @@ import threading
 SIZE_2G = 2 << 30
 
 
-class SparkCPUBatchStep(PipelineStep):
+class SparkCPUBatchStep(Step):
     engine_type = EngineType.SPARK_CPU_BATCH
 
     def meta_registry(self):
@@ -78,7 +78,7 @@ class SparkCPUBatchStep(PipelineStep):
         executor.run(pipeline)
 
 
-class SparkCPUStreamStep(PipelineStep):
+class SparkCPUStreamStep(Step):
     engine_type = EngineType.SPARK_CPU_STREAM
 
     def meta_registry(self):
