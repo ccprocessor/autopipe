@@ -22,6 +22,10 @@ SIZE_2G = 2 << 30
 class SparkCPUBatchStep(Step):
     engine_type = EngineType.SPARK_CPU_BATCH
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.executor = None
+
     def meta_registry(self):
         meta_dict = {
             "id": self.step_id,
@@ -48,7 +52,7 @@ class SparkCPUBatchStep(Step):
             raise FileNotFoundError(f"输入目录不存在: {self.input_path}")
 
         # 初始化 SparkExecutor
-        executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
+        self.executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
 
         # 定义处理函数
         def _process(_iter):
@@ -76,11 +80,28 @@ class SparkCPUBatchStep(Step):
         ]
 
         # 执行任务
-        executor.run(pipeline)
+        self.executor.run(pipeline)
+
+    def stop(self):
+        """停止 Spark 任务并更新状态"""
+        # 调用父类方法更新状态
+        super().stop()
+
+        # 停止 Spark 任务
+        if self.executor:
+            try:
+                self.executor.stop()
+                logger.info(f"{self.step_id} Spark 任务已终止")
+            except Exception as e:
+                logger.error(f"{self.step_id} 停止 Spark 任务失败: {e}")
 
 
 class SparkCPUStreamStep(Step):
     engine_type = EngineType.SPARK_CPU_STREAM
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.executor = None
 
     def meta_registry(self):
         meta_dict = {
@@ -113,6 +134,13 @@ class SparkCPUStreamStep(Step):
                     executor.spark.stop()  # 停止SparkContext
                     logger.info(f"daemon stop {step_id} spark context")
                     break
+
+                # wait for stop
+                # if step_state == StepState.STOPPED:
+                #     logger.info(f"daemon check: {step_id} has been stopped")
+                #     executor.spark.stop()  # 停止SparkContext
+                #     logger.info(f"daemon stop {step_id} spark context")
+                #     break
 
         def _process(_iter, step_id, meta_config, output_path, operators):
             from loguru import logger
@@ -229,14 +257,27 @@ class SparkCPUStreamStep(Step):
         logger.info("output_path: " + self.output_path)
 
         # 创建executor
-        executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
+        self.executor = SparkExecutor(appName=self.step_id, config=self.engine_config)
 
         # 启动独立线程监控进度
         shutdown_thread = threading.Thread(
-            target=_safe_shutdown, args=(executor, self.step_id, self.storage)
+            target=_safe_shutdown, args=(self.executor, self.step_id, self.storage)
         )
         shutdown_thread.daemon = True
         shutdown_thread.start()
 
         # 启动SparkExecutor
-        executor.run(pipeline)
+        self.executor.run(pipeline)
+
+    def stop(self):
+        """停止 Spark 任务并更新状态"""
+        # 调用父类方法更新状态
+        super().stop()
+
+        # 停止 Spark 任务
+        if self.executor:
+            try:
+                self.executor.stop()
+                logger.info(f"{self.step_id} Spark 任务已终止")
+            except Exception as e:
+                logger.error(f"{self.step_id} 停止 Spark 任务失败: {e}")

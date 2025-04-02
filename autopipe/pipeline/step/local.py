@@ -8,6 +8,16 @@ from loguru import logger
 class LocalCpuBatchStep(Step):
     engine_type = EngineType.LOCAL_CPU_BATCH
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._stop_requested = False  # 停止标志位
+
+    def stop(self):
+        """停止本地批处理任务"""
+        super().stop()  # 调用父类方法更新状态为 STOPPED
+        self._stop_requested = True
+        logger.info(f"{self.step_id} 已接收停止信号，正在终止处理...")
+
     def meta_registry(self):
         meta_dict = {
             "id": self.step_id,
@@ -39,6 +49,10 @@ class LocalCpuBatchStep(Step):
 
         # 遍历文件
         for filename in self.io.list_dir(self.input_path):
+            if self._stop_requested:
+                logger.warning(f"{self.step_id} 处理已终止")
+                return  # 直接退出方法
+
             logger.info(filename)
             if not filename.endswith((".jsonl", ".jsonl.gz")):
                 continue
@@ -54,6 +68,10 @@ class LocalCpuBatchStep(Step):
             ):
                 # print(f"execute {input_path}")
                 for line in fin:
+                    if self._stop_requested:
+                        logger.info(f"{self.step_id} 正在终止当前文件处理...")
+                        break  # 终止当前文件处理
+
                     line = line.strip()
                     # print(line)
                     if not line:
@@ -67,3 +85,7 @@ class LocalCpuBatchStep(Step):
                         fout.write(json_dumps(data) + "\n")
                     except Exception as e:
                         logger.error(f"处理失败: {input_path} | 错误: {e}")
+
+                else:
+                    continue  # 只有 for 循环正常结束（未被 break）才会执行
+                break  # 若 for 循环被 break 中断，则执行此处
