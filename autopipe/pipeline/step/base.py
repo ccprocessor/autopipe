@@ -8,6 +8,8 @@ from xinghe.io.kafka import KafkaWriter
 from xinghe.s3 import list_s3_objects
 from itertools import tee
 from loguru import logger
+from xinghe.dp.spark import SparkExecutor
+from xinghe.spark import read_any_path, write_any_path
 
 
 class EngineType:
@@ -29,6 +31,18 @@ class StepState:
 class TriggerEvent:
     JOB_FINISHED = "job_finished"
     FILE_SUCCESS = "file_success"
+
+
+class InputType:
+    DATA = "data"
+    INDEX = "index"
+
+
+spark_default_config = {
+    "spark_conf_name": "spark_4",
+    "spark.driver.memory": "10g",
+    "spark.executor.memory": "2g",
+}
 
 
 # PipelineStep 元类
@@ -167,7 +181,10 @@ class Step(ABC, metaclass=StepMeta):
                 )
                 logger.info(f"{self.step_id} input path: {self.input_path}")
 
-            if self.engine_type in (EngineType.SPARK_CPU_STREAM,):
+            if self.engine_type in (
+                EngineType.SPARK_CPU_STREAM,
+                EngineType.RAY_GPU_STREAM,
+            ):
                 self.input_path = self.get_input_path()
                 logger.info(f"{self.step_id} input path: {self.input_path}")
                 self.storage.update_step_field(
@@ -191,7 +208,10 @@ class Step(ABC, metaclass=StepMeta):
                 self.set_state(StepState.SUCCESS)
                 logger.info(f"{self.step_id} success")
 
-            elif self.engine_type in (EngineType.SPARK_CPU_STREAM,):
+            elif self.engine_type in (
+                EngineType.SPARK_CPU_STREAM,
+                EngineType.RAY_GPU_STREAM,
+            ):
                 self.process()
                 logger.info(f"{self.step_id} completed")
 
@@ -253,13 +273,17 @@ class Step(ABC, metaclass=StepMeta):
             return input_path
         # stream step的话，上游也是stream step时，input queue即为上游的output queue，input count为上游step的input count
         # 上游是batch step时，需要初始化一个队列（input queue），input path是上游step的output path
-        elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order > 1:
+        elif (
+            self.engine_type in (EngineType.SPARK_CPU_STREAM, EngineType.RAY_GPU_STREAM)
+            and self.step_order > 1
+        ):
             input_path = self.storage.get_step_field(
                 self.get_upstream_step_id(), "output_path"
             )
             return input_path
         elif (
-            self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order == 1
+            self.engine_type in (EngineType.SPARK_CPU_STREAM, EngineType.RAY_GPU_STREAM)
+            and self.step_order == 1
         ):
             input_path = self.storage.get_pipeline_field(self.pipeline_id, "input_path")
             return input_path
@@ -270,11 +294,15 @@ class Step(ABC, metaclass=StepMeta):
         if self.engine_type in (EngineType.LOCAL_CPU_BATCH, EngineType.SPARK_CPU_BATCH):
             return None
         elif (
-            self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order == 1
+            self.engine_type in (EngineType.SPARK_CPU_STREAM, EngineType.RAY_GPU_STREAM)
+            and self.step_order == 1
         ):
             input_queue = self.init_input_queue()
             return input_queue
-        elif self.engine_type in (EngineType.SPARK_CPU_STREAM,) and self.step_order > 1:
+        elif (
+            self.engine_type in (EngineType.SPARK_CPU_STREAM, EngineType.RAY_GPU_STREAM)
+            and self.step_order > 1
+        ):
             input_queue = self.storage.get_step_field(
                 self.get_upstream_step_id(), "output_queue"
             )
@@ -292,6 +320,7 @@ class Step(ABC, metaclass=StepMeta):
             EngineType.LOCAL_CPU_BATCH,
             EngineType.SPARK_CPU_BATCH,
             EngineType.SPARK_CPU_STREAM,
+            EngineType.RAY_GPU_STREAM,
         ):
             pipeline_output_path = self.storage.get_pipeline_field(
                 self.pipeline_id, "output_path"
@@ -320,26 +349,53 @@ class Step(ABC, metaclass=StepMeta):
 
         timestamp = int(time.time())
         input_queue = f"kafka://{self.pipeline_id}_step_0_output_{timestamp}"
-        kafka_writer = KafkaWriter(input_queue)
         pipeline_input_path = self.storage.get_pipeline_field(
             self.pipeline_id, "input_path"
         )
-
-        iter1, iter2 = tee(
-            (
-                fp
-                for fp in list_s3_objects(pipeline_input_path)
-                if fp.endswith((".jsonl", ".jsonl.gz"))
-            ),
-            2,
+        pipeline_input_type = self.storage.get_pipeline_field(
+            self.pipeline_id, "input_type"
         )
 
-        input_count = sum(1 for _ in iter1)
-        self.storage.update_step_field(self.step_id, "input_count", input_count)
+        if pipeline_input_type == InputType.DATA:
+            kafka_writer = KafkaWriter(input_queue)
+            iter1, iter2 = tee(
+                (
+                    fp
+                    for fp in list_s3_objects(pipeline_input_path)
+                    if fp.endswith((".jsonl", ".jsonl.gz"))
+                ),
+                2,
+            )
 
-        for fp in iter2:
-            kafka_writer.write({"id": fp, "file_path": fp})
-            kafka_writer.flush()
+            input_count = sum(1 for _ in iter1)
+            self.storage.update_step_field(self.step_id, "input_count", input_count)
+
+            for fp in iter2:
+                kafka_writer.write({"id": fp, "file_path": fp})
+                kafka_writer.flush()
+
+        elif pipeline_input_type == InputType.INDEX:
+            spark_executor = SparkExecutor(
+                appName=self.pipeline_id + "_index_read", config=spark_default_config
+            )
+            pipeline = [
+                {
+                    "fn": read_any_path,
+                    "kwargs": {
+                        "path": pipeline_input_path,
+                    },
+                },
+                {
+                    "fn": write_any_path,
+                    "kwargs": {
+                        "path": input_queue,
+                    },
+                },
+            ]
+
+            # 执行任务
+            spark_executor.run(pipeline)
+            spark_executor.spark.stop()
 
         return input_queue
 

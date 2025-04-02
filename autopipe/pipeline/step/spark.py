@@ -10,7 +10,7 @@ from xinghe.utils.json_util import json_loads
 from autopipe.infrastructure.storage import get_storage
 from autopipe.pipeline.step.base import EngineType, StepState
 from autopipe.pipeline.operator.get_op import get_operator
-from autopipe.pipeline.step.base import Step
+from autopipe.pipeline.step.base import Step, InputType
 from loguru import logger
 
 import time
@@ -99,6 +99,8 @@ class SparkCPUStreamStep(Step):
         # self.storage.register_step_progress(self.step_id)
 
     def process(self):
+        file_compression = self.engine_config.get("output_compression", None)
+
         def _safe_shutdown(executor, step_id, storage):
             """安全关闭Spark Streaming的轮询检查"""
             while True:
@@ -125,6 +127,7 @@ class SparkCPUStreamStep(Step):
                 file_meta_client = get_storage(meta_config)
 
                 input_file_path = d["file_path"]
+                input_track_id = d["track_id"]
 
                 if not is_s3_path(input_file_path):
                     logger.info(f"{input_file_path} is not s3 path")
@@ -135,8 +138,17 @@ class SparkCPUStreamStep(Step):
                     logger.info(f"{input_file_path} is not exist")
                     continue
 
-                file_name = input_file_path.split("/")[-1]
-                output_file_path = f"{output_path}/{file_name}"
+                if self.input_type == InputType.DATA:
+                    file_name = input_file_path.split("/")[-1]
+                    output_file_path = f"{output_path}/{file_name}"
+
+                elif self.input_type == InputType.INDEX:
+                    output_file_path = (
+                        f"{output_path}/{input_track_id}.jsonl" + f".{file_compression}"
+                        if file_compression
+                        else f"{output_path}/{input_track_id}.jsonl"
+                    )
+
                 output_head = head_s3_object_with_retry(output_file_path)
 
                 if output_head:
