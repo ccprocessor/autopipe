@@ -22,11 +22,11 @@ class RedisStorage(StorageBase):
         )
 
     def register_pipeline(self, pipeline_id: str, pipeline_meta: dict) -> bool:
-        pipeline_meta_str = json_dumps(pipeline_meta, ensure_ascii=False)
+        pipeline_meta_str = json_dumps(pipeline_meta)
         return self.client.set(pipeline_id, pipeline_meta_str)
 
     def register_step(self, step_id: str, step_meta: dict) -> bool:
-        step_meta_str = json_dumps(step_meta, ensure_ascii=False)
+        step_meta_str = json_dumps(step_meta)
         return self.client.set(step_id, step_meta_str)
 
     def register_step_progress(
@@ -40,7 +40,7 @@ class RedisStorage(StorageBase):
         if step_meta:
             step_meta = json_loads(step_meta)
             step_meta["state"] = state
-            step_meta_str = json_dumps(step_meta, ensure_ascii=False)
+            step_meta_str = json_dumps(step_meta)
             return self.client.set(step_id, step_meta_str)
         return False
 
@@ -71,7 +71,7 @@ class RedisStorage(StorageBase):
         if step_meta:
             step_meta = json_loads(step_meta)
             step_meta[field] = value
-            step_meta_str = json_dumps(step_meta, ensure_ascii=False)
+            step_meta_str = json_dumps(step_meta)
             return self.client.set(step_id, step_meta_str)
         return False
 
@@ -87,7 +87,7 @@ class RedisStorage(StorageBase):
         if pipeline_meta:
             pipeline_meta = json_loads(pipeline_meta)
             pipeline_meta[field] = value
-            pipeline_meta_str = json_dumps(pipeline_meta, ensure_ascii=False)
+            pipeline_meta_str = json_dumps(pipeline_meta)
             return self.client.set(pipeline_id, pipeline_meta_str)
         return False
 
