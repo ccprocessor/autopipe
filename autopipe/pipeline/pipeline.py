@@ -55,7 +55,6 @@ class Pipeline:
         self.steps: List[Step] = []
         self.processes: List[Process] = []
         self._check_interval = 3  # 状态检查间隔（秒）
-        self._is_running = False
 
         self.register_metadata()
         self.construct_steps()
@@ -109,12 +108,12 @@ class Pipeline:
 
         # 启动状态监控进程
         monitor_proc = Process(target=self._monitor_steps)
+        self.processes.append(monitor_proc)
         monitor_proc.start()
 
         # 等待所有进程完成
         for proc in self.processes:
             proc.join()
-        monitor_proc.join()
         logger.info(f"Pipeline {self.pipeline_id} running completed")
 
     def _run_step(self, step: Step):
@@ -164,18 +163,35 @@ class Pipeline:
         logger.info("Pipeline completed")
 
     def stop(self):
-        """停止所有Step"""
-        self._is_running = False
-        for step in self.steps:
-            step.stop()
+        """停止所有进程（包括步骤和监控进程）"""
+        logger.info(f"Stopping pipeline {self.pipeline_id}...")
 
-        # 等待所有进程结束
+        # 停止所有步骤
+        for step in self.steps:
+            try:
+                step.stop()
+            except Exception as e:
+                logger.error(f"Failed to stop step {step.step_id}: {e}")
+
+        # 终止所有进程（包括监控进程）
         for proc in self.processes:
-            proc.join()
+            if proc.is_alive():
+                proc.terminate()  # 发送 SIGTERM
+                logger.debug(f"Terminated process {proc.pid}")
+
+        # 强制清理残留进程
+        for proc in self.processes:
+            if proc.is_alive():
+                proc.kill()  # 发送 SIGKILL
+                logger.warning(f"Killed process {proc.pid}")
+
+        # 更新状态
+        self.storage.update_pipeline_field(
+            self.pipeline_id, "pipeline_state", PipelineState.STOPPED
+        )
 
     def resume(self):
         """恢复所有Step"""
-        self._is_running = True
         for step in self.steps:
             step.resume()
 
@@ -183,7 +199,6 @@ class Pipeline:
         """获取Pipeline状态"""
         status = {
             "pipeline_id": self.pipeline_id,
-            "is_running": self._is_running,
             "steps": [],
         }
 
