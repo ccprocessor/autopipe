@@ -2,7 +2,7 @@ from autopipe.infrastructure.storage.base_storage import (
     StorageBase,
     StorageConfig,
 )
-from xinghe.utils.json import json_dumps, json_loads
+from xinghe.utils.json_util import json_dumps, json_loads
 from typing import Dict, List, Optional, Any
 
 
