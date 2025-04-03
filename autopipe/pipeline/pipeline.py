@@ -37,9 +37,9 @@ class Pipeline:
         if pipeline_id:
             # 恢复已有流程
             existing_meta = self.storage.get_pipeline_meta(pipeline_id)
-        if not existing_meta:
-            raise ValueError(f"Pipeline {pipeline_id} does not exist")
-            self._init_from_existing_meta(existing_meta)
+            if not existing_meta:
+                raise ValueError(f"Pipeline {pipeline_id} does not exist")
+                self._init_from_existing_meta(existing_meta)
         else:
             # 创建新流程
             self.pipeline_meta = config.get("pipeline_meta", {})
