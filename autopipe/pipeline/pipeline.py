@@ -30,34 +30,59 @@ class Pipeline:
 
     def __init__(self, config: Dict, pipeline_id: str = None):
         self.config = config
-        self.pipeline_meta = self.config.get("pipeline_meta")
-        self.pipeline_name = self.pipeline_meta.get("pipeline_name")
-        self.pipeline_mode = self.pipeline_meta.get("pipeline_mode")
-
-        if not pipeline_id:
-            self.pipeline_id = f"{self.pipeline_name}_{human_readable_id()}"
-        else:
-            self.pipeline_id = pipeline_id
-        print(f"pipeline_id: {self.pipeline_id}")
-
         # storage
         self.meta_config = config.meta_storage
         self.storage = get_storage(self.meta_config)
 
+        if pipeline_id:
+            # 恢复已有流程
+            existing_meta = self.storage.get_pipeline_meta(pipeline_id)
+        if not existing_meta:
+            raise ValueError(f"Pipeline {pipeline_id} does not exist")
+            self._init_from_existing_meta(existing_meta)
+        else:
+            # 创建新流程
+            self.pipeline_meta = config.get("pipeline_meta", {})
+            self.pipeline_name = self.pipeline_meta.get("pipeline_name")
+            self.pipeline_mode = self.pipeline_meta.get("pipeline_mode")
+            self.pipeline_id = f"{self.pipeline_name}_{human_readable_id()}"
+            self._init_new_pipeline()
+
+        self.processes: List[Process] = []
+        self._check_interval = 3  # 状态检查间隔（秒）
+
+    def _init_new_pipeline(self):
+        """初始化新流程"""
         # dataset
-        self.dataset_config = config.get("dataset")
+        self.dataset_config = self.config.get("dataset", {})
         self.input_path = self.dataset_config.get("input_path")
         self.input_type = self.dataset_config.get("input_type")
         self.output_path = self.dataset_config.get("output_path")
 
         # steps
-        self.steps_config = config.get("steps")
+        self.steps_config = self.config.get("steps", [])
         self.steps: List[Step] = []
-        self.processes: List[Process] = []
-        self._check_interval = 3  # 状态检查间隔（秒）
 
+        # register metadata
         self.register_metadata()
+
+        # construct steps
         self.construct_steps()
+
+    def _init_from_existing_meta(self, existing_meta: Dict):
+        """从元数据恢复流程"""
+        self.pipeline_id = existing_meta["pipeline_id"]
+        self.pipeline_name = existing_meta["pipeline_name"]
+        self.input_path = existing_meta["input_path"]
+        self.input_type = existing_meta["input_type"]
+        self.output_path = existing_meta["output_path"]
+        # 恢复所有步骤
+        step_ids = existing_meta.get("steps", [])
+        self.steps = []
+        for step_id in step_ids:
+            step_meta = self.storage.get_step_meta(step_id)
+            step = Step.create_from_meta(step_meta, self.meta_config)
+            self.steps.append(step)
 
     def construct_steps(self):
         """构造pipeline的所有steps"""

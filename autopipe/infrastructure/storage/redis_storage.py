@@ -2,7 +2,7 @@ from autopipe.infrastructure.storage.base_storage import (
     StorageBase,
     StorageConfig,
 )
-import json
+from xinghe.utils.json import json_dumps, json_loads
 from typing import Dict, List, Optional, Any
 
 
@@ -22,11 +22,11 @@ class RedisStorage(StorageBase):
         )
 
     def register_pipeline(self, pipeline_id: str, pipeline_meta: dict) -> bool:
-        pipeline_meta_str = json.dumps(pipeline_meta, ensure_ascii=False)
+        pipeline_meta_str = json_dumps(pipeline_meta, ensure_ascii=False)
         return self.client.set(pipeline_id, pipeline_meta_str)
 
     def register_step(self, step_id: str, step_meta: dict) -> bool:
-        step_meta_str = json.dumps(step_meta, ensure_ascii=False)
+        step_meta_str = json_dumps(step_meta, ensure_ascii=False)
         return self.client.set(step_id, step_meta_str)
 
     def register_step_progress(
@@ -38,9 +38,9 @@ class RedisStorage(StorageBase):
     def set_step_state(self, step_id: str, state: str) -> bool:
         step_meta = self.client.get(step_id)
         if step_meta:
-            step_meta = json.loads(step_meta)
+            step_meta = json_loads(step_meta)
             step_meta["state"] = state
-            step_meta_str = json.dumps(step_meta, ensure_ascii=False)
+            step_meta_str = json_dumps(step_meta, ensure_ascii=False)
             return self.client.set(step_id, step_meta_str)
         return False
 
@@ -55,38 +55,50 @@ class RedisStorage(StorageBase):
     def get_step_state(self, step_id: str) -> Optional[str]:
         step_meta = self.client.get(step_id)
         if step_meta:
-            step_meta = json.loads(step_meta)
+            step_meta = json_loads(step_meta)
             return step_meta["state"]
         return None
 
     def get_step_field(self, step_id: str, field: str) -> Optional[Any]:
         step_meta = self.client.get(step_id)
         if step_meta:
-            step_meta = json.loads(step_meta)
+            step_meta = json_loads(step_meta)
             return step_meta[field]
         return None
 
     def update_step_field(self, step_id: str, field: str, value: Any) -> bool:
         step_meta = self.client.get(step_id)
         if step_meta:
-            step_meta = json.loads(step_meta)
+            step_meta = json_loads(step_meta)
             step_meta[field] = value
-            step_meta_str = json.dumps(step_meta, ensure_ascii=False)
+            step_meta_str = json_dumps(step_meta, ensure_ascii=False)
             return self.client.set(step_id, step_meta_str)
         return False
 
     def get_pipeline_field(self, pipeline_id: str, field: str) -> Optional[Any]:
         pipeline_meta = self.client.get(pipeline_id)
         if pipeline_meta:
-            pipeline_meta = json.loads(pipeline_meta)
+            pipeline_meta = json_loads(pipeline_meta)
             return pipeline_meta[field]
         return None
 
     def update_pipeline_field(self, pipeline_id: str, field: str, value: Any) -> bool:
         pipeline_meta = self.client.get(pipeline_id)
         if pipeline_meta:
-            pipeline_meta = json.loads(pipeline_meta)
+            pipeline_meta = json_loads(pipeline_meta)
             pipeline_meta[field] = value
-            pipeline_meta_str = json.dumps(pipeline_meta, ensure_ascii=False)
+            pipeline_meta_str = json_dumps(pipeline_meta, ensure_ascii=False)
             return self.client.set(pipeline_id, pipeline_meta_str)
         return False
+
+    def get_pipeline_meta(self, pipeline_id: str) -> Optional[Dict]:
+        pipeline_meta = self.client.get(pipeline_id)
+        if pipeline_meta:
+            return json_loads(pipeline_meta)
+        return None
+
+    def get_step_meta(self, step_id: str) -> Optional[Dict]:
+        step_meta = self.client.get(step_id)
+        if step_meta:
+            return json_loads(step_meta)
+        return None

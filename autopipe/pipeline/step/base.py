@@ -107,6 +107,33 @@ class Step(ABC, metaclass=StepMeta):
             **kwargs,
         )
 
+    # {"id": "test_pipeline_250403_1RRPS3_step_1", "engine_type": "spark-cpu-stream", "trigger_event": "job_finished", "input_path": null, "input_queue": null,
+    #  "input_count": null, "output_path": "s3://data-warehouse/samples/20250401/output-20250401-stream-6/test_pipeline_250403_1RRPS3_step_1",
+    #  "output_queue": "kafka://test_pipeline_250403_1RRPS3_step_1_output_1743662738", "state": null,
+    #  "operators": [{"name": "op1", "params": {}}, {"name": "op2", "params": {}}, {"name": "clean_model_demo", "params": {}}]}
+
+    @classmethod
+    def create_from_meta(cls, step_meta: Dict, meta_config: Dict) -> "Step":
+        """从元数据创建步骤实例"""
+        return cls.create(
+            pipeline_id=step_meta["pipeline_id"],
+            step_order=step_meta["step_order"],
+            trigger_event=step_meta["trigger_event"],
+            engine_type=step_meta["engine_type"],
+            engine_config=step_meta["engine_config"],
+            operators=step_meta["operators"],
+            meta_config=meta_config,
+            is_last_step=step_meta.get("is_last_step", False),
+            # other from meta
+            step_id=step_meta["id"],
+            input_path=step_meta["input_path"],
+            input_queue=step_meta["input_queue"],
+            input_count=step_meta["input_count"],
+            output_path=step_meta["output_path"],
+            output_queue=step_meta["output_queue"],
+            state=step_meta["state"],
+        )
+
     def __init__(
         self,
         pipeline_id: str,
@@ -116,7 +143,7 @@ class Step(ABC, metaclass=StepMeta):
         engine_config: Dict,
         operators: List,
         meta_config,
-        is_last_step: bool = False,
+        **kwargs,
     ):
         # 核心属性初始化
         self.pipeline_id = pipeline_id
@@ -136,17 +163,17 @@ class Step(ABC, metaclass=StepMeta):
         # 状态管理
         # self.state = StepState.PENDING
         # self.input_count = 0
-        self.is_last_step = is_last_step
+        self.is_last_step = kwargs.get("is_last_step", False)
         self.meta_config = meta_config
         self.storage = self._get_storage(meta_config)
         self._check_interval = 3
 
         # 运行配置
-        self.input_path = None
-        self.output_path = self.create_output_path()
-        self.input_queue = None
-        self.output_queue = self.create_output_queue()
-        self.input_count = None
+        self.input_path = kwargs.get("input_path", None)
+        self.output_path = kwargs.get("output_path", self.create_output_path())
+        self.input_queue = kwargs.get("input_queue", None)
+        self.output_queue = kwargs.get("output_queue", self.create_output_queue())
+        self.input_count = kwargs.get("input_count", None)
 
         # 输入输出
         self.io = IO()
