@@ -69,6 +69,8 @@ class Pipeline:
         # construct steps
         self.construct_steps()
 
+        logger.info(f"new pipeline constructed: {self.pipeline_id}")
+
     def _init_from_existing_meta(self, existing_meta: Dict):
         """从元数据恢复流程"""
         self.pipeline_id = existing_meta["pipeline_id"]
@@ -83,6 +85,8 @@ class Pipeline:
             step_meta = self.storage.get_step_meta(step_id)
             step = Step.create_from_meta(step_meta, self.meta_config)
             self.steps.append(step)
+
+        logger.info(f"pipeline {self.pipeline_id} restored from meta")
 
     def construct_steps(self):
         """构造pipeline的所有steps"""
