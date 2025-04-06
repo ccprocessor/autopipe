@@ -142,7 +142,7 @@ class SparkCPUStreamStep(Step):
                 #     logger.info(f"daemon stop {step_id} spark context")
                 #     break
 
-        def _process(_iter, step_id, meta_config, output_path, operators):
+        def _process(_iter, pipeline_id, step_id, meta_config, output_path, operators):
             from loguru import logger
 
             use_stream = SIZE_2G
@@ -166,11 +166,14 @@ class SparkCPUStreamStep(Step):
                     logger.info(f"{input_file_path} is not exist")
                     continue
 
-                if self.input_type == InputType.DATA:
+                input_type = file_meta_client.get_pipeline_field(
+                    pipeline_id, "input_type"
+                )
+                if input_type == InputType.DATA:
                     file_name = input_file_path.split("/")[-1]
                     output_file_path = f"{output_path}/{file_name}"
 
-                elif self.input_type == InputType.INDEX:
+                elif input_type == InputType.INDEX:
                     output_file_path = (
                         f"{output_path}/{input_track_id}.jsonl" + f".{file_compression}"
                         if file_compression
@@ -219,10 +222,10 @@ class SparkCPUStreamStep(Step):
                 {
                     "fn": _process,
                     "kwargs": {
+                        "pipeline_id": self.pipeline_id,
                         "step_id": self.step_id,
                         "meta_config": self.meta_config,
                         "output_path": self.output_path,
-                        "input_count": self.input_count,
                         "operators": self.operators,
                     },
                 },
