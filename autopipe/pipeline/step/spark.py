@@ -155,7 +155,7 @@ class SparkCPUStreamStep(Step):
                 file_meta_client = get_storage(meta_config)
 
                 input_file_path = d["file_path"]
-                input_track_id = d["track_id"]
+                input_track_id = d.get("track_id", None)
 
                 if not is_s3_path(input_file_path):
                     logger.info(f"{input_file_path} is not s3 path")
