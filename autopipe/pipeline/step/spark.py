@@ -247,6 +247,7 @@ class SparkCPUStreamStep(Step):
                 {
                     "fn": _process,
                     "kwargs": {
+                        "pipeline_id": self.pipeline_id,
                         "step_id": self.step_id,
                         "meta_config": self.meta_config,
                         "output_path": self.output_path,
