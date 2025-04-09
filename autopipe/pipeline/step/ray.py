@@ -47,6 +47,46 @@ def read_func(
         yield d
 
 
+def write_func(
+    data_iter: Iterator,
+    # use_stream: int,
+    step_id,
+    output_path,
+    output_queue,
+    meta_config,
+    input_file: str,
+) -> Iterator[Dict[str, Any]]:
+    if not input_file:
+        raise SkipTask("missing [input_file]")
+    if not is_s3_path(input_file):
+        raise SkipTask(f"invalid input_file [{input_file}]")
+
+    input_head = head_s3_object_with_retry(input_file)
+    if not input_head:
+        raise SkipTask(f"file [{input_file}] not found")
+
+    # use_stream = use_stream
+
+    output_file = output_path + "/" + input_file.split("/")[-1]
+    writer = S3DocWriter(output_file) if output_file else None
+
+    file_meta_client = get_storage(meta_config)
+
+    for d in data_iter:
+        writer.write(d)
+
+    writer.flush()
+    writer.flush()
+    file_meta_client.update_step_progress(step_id, output_file)
+    input_count = file_meta_client.get_step_field(step_id, "input_count")
+    step_progress = file_meta_client.get_step_progress(step_id)
+
+    if input_count == step_progress:
+        file_meta_client.set_step_state(step_id, StepState.SUCCESS)
+
+    return []
+
+
 class RayGPUStreamStep(Step):
     engine_type = EngineType.RAY_GPU_STREAM
 
@@ -92,7 +132,13 @@ class RayGPUStreamStep(Step):
 
         sequence.append(
             {
-                "fn": FileWriter,
+                "fn": write_func,
+                "kwargs": {
+                    "step_id": self.step_id,
+                    "output_path": self.output_path,
+                    "output_queue": self.output_queue,
+                    "meta_config": self.meta_config,
+                },
                 "ray_remote_args": {
                     "memory": (2 << 30),
                     "num_cpus": 1,
