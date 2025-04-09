@@ -1,0 +1,149 @@
+from xinghe.dp.ray import RayExecutor
+from xinghe.spark import read_any_path, write_any_path
+from xinghe.s3 import (
+    S3DocWriter,
+    head_s3_object_with_retry,
+    is_s3_path,
+    read_s3_rows,
+)
+from xinghe.dp.base import SkipTask
+from xinghe.utils.json_util import json_loads
+from xinghe.ops.file import FileReader, FileWriter
+
+from autopipe.infrastructure.storage import get_storage
+from autopipe.pipeline.step.base import EngineType, StepState
+from autopipe.pipeline.operator.get_op import get_operator
+from autopipe.pipeline.step.base import Step, InputType
+from typing import Iterator, Dict, Any, Iterable
+from loguru import logger
+
+
+import time
+import threading
+
+SIZE_2G = 2 << 30
+
+
+def read_func(
+    dummy_iter: Iterator, use_stream: int, input_file: str
+) -> Iterator[Dict[str, Any]]:
+    if not input_file:
+        raise SkipTask("missing [input_file]")
+    if not is_s3_path(input_file):
+        raise SkipTask(f"invalid input_file [{input_file}]")
+
+    input_head = head_s3_object_with_retry(input_file)
+    if not input_head:
+        raise SkipTask(f"file [{input_file}] not found")
+
+    use_stream = use_stream
+
+    input_file_rows = read_s3_rows(input_file, use_stream)
+
+    for d in input_file_rows:
+        d = json_loads(d.value)
+        yield d
+
+
+class RayGPUStreamStep(Step):
+    engine_type = EngineType.RAY_GPU_STREAM
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.executor = None
+
+    def meta_registry(self):
+        meta_dict = {
+            "id": self.step_id,
+            "engine_type": self.engine_type,
+            "trigger_event": self.trigger_event,
+            "input_path": self.input_path,
+            "input_queue": self.input_queue,
+            "input_count": self.input_count,
+            "output_path": self.output_path,
+            "output_queue": self.output_queue,
+            "state": None,
+            "operators": self.operators,
+        }
+        self.storage.register_step(self.step_id, meta_dict)
+        # self.storage.register_step_progress(self.step_id)
+
+    def construct_sequence(self, ops):
+        read_stream = self.engine_config.get("read_stream", 2 << 30)
+
+        sequence = [
+            {
+                "fn": read_func,
+                "ray_remote_args": {
+                    "memory": read_stream,
+                    "num_cpus": 1,
+                },
+            }
+        ]
+
+        for op in ops:
+            seq_dict = {
+                "fn": get_operator(op),
+                "ray_remote_args": op.params.get("ray_remote_args", {}),
+            }
+            sequence.append(seq_dict)
+
+        sequence.append(
+            {
+                "fn": FileWriter,
+                "ray_remote_args": {
+                    "memory": (2 << 30),
+                    "num_cpus": 1,
+                },
+            },
+        )
+        return sequence
+
+    def process(self):
+        file_compression = self.engine_config.get("output_compression", None)
+
+        def _safe_shutdown(executor, step_id, storage):
+            """安全关闭Spark Streaming的轮询检查"""
+            while True:
+                time.sleep(6)  # 每6s检查一次
+                step_state = storage.get_step_state(step_id)
+                # print(f"daemon check: {step_id} state: {step_state}")
+
+                if step_state == StepState.SUCCESS:
+                    logger.info(f"daemon check: {step_id} success")
+                    executor._clean_actor_pools()  # 停止SparkContext
+                    logger.info(f"daemon stop {step_id} clean ray actor pools")
+                    break
+
+        sequence = self.construct_sequence(self.operators)
+
+        logger.info(self.input_queue)
+        logger.info(self.output_queue)
+        logger.info("output_path: " + self.output_path)
+
+        # 创建executor
+        parallelism = self.engine_config.get("parallelism", 20)
+        self.executor = RayExecutor(parallelism=parallelism)
+
+        # 启动独立线程监控进度
+        shutdown_thread = threading.Thread(
+            target=_safe_shutdown, args=(self.executor, self.step_id, self.storage)
+        )
+        shutdown_thread.daemon = True
+        shutdown_thread.start()
+
+        # 启动SparkExecutor
+        self.executor.run(sequence)
+
+    def stop(self):
+        """停止 Spark 任务并更新状态"""
+        # 调用父类方法更新状态
+        super().stop()
+
+        # 停止 Spark 任务
+        if self.executor:
+            try:
+                self.executor._clean_actor_pools()
+                logger.info(f"{self.step_id} Ray 任务已终止")
+            except Exception as e:
+                logger.error(f"{self.step_id} 停止 Ray 任务失败: {e}")

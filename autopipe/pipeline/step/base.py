@@ -198,6 +198,7 @@ class Step(ABC, metaclass=StepMeta):
                     self.set_state(StepState.STOPPED)
                     return
 
+            # update input path and input queue when requirements are met
             if self.engine_type in (
                 EngineType.LOCAL_CPU_BATCH,
                 EngineType.SPARK_CPU_BATCH,
@@ -227,6 +228,7 @@ class Step(ABC, metaclass=StepMeta):
             logger.info(f"{self.step_id} run")
             self.set_state(StepState.RUNNING)
 
+            # call process method
             if self.engine_type in (
                 EngineType.LOCAL_CPU_BATCH,
                 EngineType.SPARK_CPU_BATCH,
