@@ -1,4 +1,4 @@
-from xinghe.dp.ray import RayExecutor
+from xinghe.dp.ray import RayTaskExecutor
 from xinghe.spark import read_any_path, write_any_path
 from xinghe.s3 import (
     S3DocWriter,
@@ -16,6 +16,8 @@ from autopipe.pipeline.operator.get_op import get_operator
 from autopipe.pipeline.step.base import Step, InputType
 from typing import Iterator, Dict, Any, Iterable
 from loguru import logger
+import logging
+import ray
 
 
 import time
@@ -102,6 +104,20 @@ class RayGPUStreamStep(Step):
     def process(self):
         file_compression = self.engine_config.get("output_compression", None)
 
+        ray_address = self.engine_config.get("address", None)
+        if not ray_address:
+            raise Exception("ray address is required")
+
+        ray_runtime_env = self.engine_config.get("runtime_env", {})
+        log_to_driver = self.engine_config.get("log_to_driver", False)
+
+        ray.init(
+            address=ray_address,
+            runtime_env=ray_runtime_env,
+            log_to_driver=log_to_driver,
+            logging_level=logging.INFO,
+        )
+
         def _safe_shutdown(executor, step_id, storage):
             """安全关闭Spark Streaming的轮询检查"""
             while True:
@@ -123,7 +139,7 @@ class RayGPUStreamStep(Step):
 
         # 创建executor
         parallelism = self.engine_config.get("parallelism", 20)
-        self.executor = RayExecutor(parallelism=parallelism)
+        self.executor = RayTaskExecutor(parallelism=parallelism)
 
         # 启动独立线程监控进度
         shutdown_thread = threading.Thread(
