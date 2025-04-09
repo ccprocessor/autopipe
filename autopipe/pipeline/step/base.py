@@ -398,7 +398,7 @@ class Step(ABC, metaclass=StepMeta):
             self.storage.update_step_field(self.step_id, "input_count", input_count)
 
             for fp in iter2:
-                kafka_writer.write({"id": fp, "file_path": fp})
+                kafka_writer.write({"id": fp, "input_file": fp})
                 kafka_writer.flush()
 
         elif pipeline_input_type == InputType.INDEX:

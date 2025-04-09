@@ -154,7 +154,7 @@ class SparkCPUStreamStep(Step):
             for d in _iter:
                 file_meta_client = get_storage(meta_config)
 
-                input_file_path = d["file_path"]
+                input_file_path = d["input_file"]
                 input_track_id = d.get("track_id", None)
 
                 if not is_s3_path(input_file_path):
@@ -208,7 +208,7 @@ class SparkCPUStreamStep(Step):
                 if input_count == step_progress:
                     file_meta_client.set_step_state(step_id, StepState.SUCCESS)
 
-                d["file_path"] = output_file_path
+                d["input_file"] = output_file_path
                 yield d
 
         if not self.is_last_step:
