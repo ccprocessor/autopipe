@@ -126,7 +126,7 @@ class RayGPUStreamStep(Step):
         for op in ops:
             seq_dict = {
                 "fn": get_operator(op["name"], op["params"]),
-                "ray_remote_args": op.params.get("ray_remote_args", {}),
+                "ray_remote_args": op.params_dict.get("ray_remote_args", {}),
             }
             sequence.append(seq_dict)
 
