@@ -117,6 +117,9 @@ class RayGPUStreamStep(Step):
         sequence = [
             {
                 "fn": read_func,
+                "kwargs": {
+                    "use_stream": read_stream,
+                },
                 "ray_remote_args": {
                     "memory": read_stream,
                     "num_cpus": 1,
