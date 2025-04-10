@@ -1,4 +1,5 @@
 from xinghe.dp.ray import RayTaskExecutor
+from xinghe.dp.task import KafkaTasks
 from xinghe.spark import read_any_path, write_any_path
 from xinghe.s3 import (
     S3DocWriter,
@@ -195,7 +196,8 @@ class RayGPUStreamStep(Step):
         shutdown_thread.start()
 
         # 启动SparkExecutor
-        self.executor.run(sequence)
+        tasks = KafkaTasks(self.input_queue, self.step_id)
+        self.executor.run(tasks, sequence)
 
     def stop(self):
         """停止 Spark 任务并更新状态"""
