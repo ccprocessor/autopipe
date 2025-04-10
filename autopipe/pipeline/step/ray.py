@@ -153,7 +153,9 @@ class RayGPUStreamStep(Step):
         return sequence
 
     def process(self):
-        file_compression = self.engine_config.get("output_compression", None)
+        self.stop_event = threading.Event()
+
+        # file_compression = self.engine_config.get("output_compression", None)
 
         ray_address = self.engine_config.get("address", None)
         if not ray_address:
@@ -169,7 +171,7 @@ class RayGPUStreamStep(Step):
             logging_level=logging.INFO,
         )
 
-        def _safe_shutdown(executor, step_id, storage):
+        def _safe_shutdown(executor, step_id, storage, stop_event):
             """安全关闭Spark Streaming的轮询检查"""
             while True:
                 time.sleep(6)  # 每6s检查一次
@@ -180,6 +182,7 @@ class RayGPUStreamStep(Step):
                     logger.info(f"daemon check: {step_id} success")
                     executor._clean_actor_pools()  # 停止SparkContext
                     logger.info(f"daemon stop {step_id} clean ray actor pools")
+                    stop_event.set()
                     break
 
         sequence = self.construct_sequence(self.operators)
@@ -194,14 +197,31 @@ class RayGPUStreamStep(Step):
 
         # 启动独立线程监控进度
         shutdown_thread = threading.Thread(
-            target=_safe_shutdown, args=(self.executor, self.step_id, self.storage)
+            target=_safe_shutdown,
+            args=(self.executor, self.step_id, self.storage, self.stop_event),
         )
         shutdown_thread.daemon = True
         shutdown_thread.start()
 
         # 启动SparkExecutor
         tasks = KafkaTasks(self.input_queue, self.step_id)
-        self.executor.run(tasks, sequence)
+        # self.executor.run(tasks, sequence)
+
+        # 启动执行线程（将 executor.run 放入独立线程）
+        executor_thread = threading.Thread(
+            target=self.executor.run, args=(tasks, sequence)
+        )
+        executor_thread.start()
+
+        # 主线程阻塞，等待事件触发
+        self.stop_event.wait()  # 直到 stop_event.set() 被调用
+
+        # 清理资源
+        executor_thread.join(timeout=10)  # 等待执行线程结束
+        if executor_thread.is_alive():
+            logger.warning("Executor thread did not exit gracefully, forcing cleanup")
+
+        logger.info("Process terminated after step succeeded.")
 
     def stop(self):
         """停止 Spark 任务并更新状态"""
