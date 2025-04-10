@@ -72,18 +72,19 @@ def write_func(
     print(f"output_file: {output_file}")
     writer = S3DocWriter(output_file) if output_file else None
 
-    # file_meta_client = get_storage(meta_config)
+    file_meta_client = get_storage(meta_config)
 
     for d in data_iter:
         writer.write(d)
 
     writer.flush()
-    # file_meta_client.update_step_progress(step_id, output_file)
-    # input_count = file_meta_client.get_step_field(step_id, "input_count")
-    # step_progress = file_meta_client.get_step_progress(step_id)
+    file_meta_client.update_step_progress(step_id, output_file)
+    input_count = file_meta_client.get_step_field(step_id, "input_count")
+    step_progress = file_meta_client.get_step_progress(step_id)
+    print(f"input_count: {input_count}, step_progress: {step_progress}")
 
-    # if input_count == step_progress:
-    #     file_meta_client.set_step_state(step_id, StepState.SUCCESS)
+    if input_count == step_progress:
+        file_meta_client.set_step_state(step_id, StepState.SUCCESS)
 
     return []
 
