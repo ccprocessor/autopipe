@@ -197,6 +197,7 @@ class RayGPUStreamStep(Step):
                     stop_event.set()
                     break
 
+        print("***************start ray sequence construction")
         sequence = self.construct_sequence(self.operators)
 
         logger.info(self.input_queue)
