@@ -7,6 +7,7 @@ from xinghe.s3 import (
     is_s3_path,
     read_s3_rows,
 )
+from xinghe.ml.model import *
 from xinghe.dp.base import SkipTask
 from xinghe.utils.json_util import json_loads
 from xinghe.ops.file import FileReader, FileWriter
@@ -145,6 +146,7 @@ class RayGPUStreamStep(Step):
                 logger.info(f"start model operation {seq_dict['kwargs']['model_cls']}")
 
                 model_cls_str = seq_dict["kwargs"]["model_cls"]
+
                 model_cls = globals()[model_cls_str]
                 seq_dict["kwargs"]["model_cls"] = model_cls
 
