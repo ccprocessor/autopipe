@@ -18,7 +18,8 @@ class CleanModelDemo(BaseOperation):
     def resource_load(self):
         ctypes.cdll.LoadLibrary("libgomp.so.1")
         self.clean_model = load_clean_model(
-            "/share/chenhaojiong/notebooks/common_clean_2/pipline-dev/models/lgb_model_0925.pkl")
+            "/share/chenhaojiong/notebooks/common_clean_2/pipline-dev/models/lgb_model_0925.pkl"
+        )
 
     def predict_with_feature(self, feature_dict: dict) -> float:
         feature_df = pd.json_normalize(feature_dict)
@@ -76,7 +77,7 @@ class CleanModelDemo(BaseOperation):
             # "dup_9gram": dup_9gram,
             "dup_10gram": 0,
             "std_dev_unicode_value": 0,
-            "mean_diff_unicode_value": 0
+            "mean_diff_unicode_value": 0,
         }
 
         prob = self.predict_with_feature(features_dict)
@@ -98,7 +99,7 @@ def load_clean_model(model_path: str):
     else:
         pickle_path = model_path
 
-    with open(pickle_path, 'rb') as file:
+    with open(pickle_path, "rb") as file:
         clean_model = pickle.load(file)
     print(f"clean_model: {pickle_path}")
 
@@ -108,7 +109,7 @@ def load_clean_model(model_path: str):
 def get_asset(path: str):
     path = path.lstrip("/")
     if path.startswith("assets/"):
-        path = path[len("assets/"):]
+        path = path[len("assets/") :]
     assets_dir = get_assets_dir()
     return os.path.join(assets_dir, path)
 
@@ -143,14 +144,14 @@ def stats_entropy(content: str) -> float:
 
 
 def div_zero(a, b):
-    '''
+    """
     避免除零错误
     Args:
         a: float 分子
         b: float 分母
     Returns:
         result: float 除法结果
-    '''
+    """
     if b == 0 and a == 0:
         result = float("nan")
     elif b == 0:
