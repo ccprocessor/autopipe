@@ -8,7 +8,7 @@ def get_operator(name: str, params_dict: Optional[Dict[str, Any]] = None) -> Any
 
     if name not in _REGISTRY:
         raise KeyError(
-            f"Operator '{name}' not found. Available able: {list(_REGISTRY.keys())}"
+            f"Operator '{name}' not found. Available ablee: {list(_REGISTRY.keys())}"
         )
 
     operator_cls = _REGISTRY[name]
