@@ -103,7 +103,7 @@ class Operation5(BaseOperation):
 class ModelOperation(BaseOperation, ModelActor):
     # 必须定义 BaseOperation 的抽象属性
     operator_name = "model_operator"
-    operator_type = "default"
+    operator_type = "gpu_model"
 
     def __init__(
         self,
