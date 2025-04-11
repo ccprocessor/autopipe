@@ -20,7 +20,6 @@ from loguru import logger
 import logging
 import ray
 
-
 import time
 import threading
 
@@ -131,8 +130,19 @@ class RayGPUStreamStep(Step):
         for op in ops:
             seq_dict = {
                 "fn": get_operator(op["name"], op["params"]),
+                "kwargs": op["params"].get("kwargs", {}),
                 "ray_remote_args": op["params"].get("ray_remote_args", {}),
             }
+
+            if seq_dict["fn"].operator_type == "gpu_model":
+                model_cls_str = seq_dict["kwargs"]["model_cls"]
+                model_cls = globals()[model_cls_str]
+                seq_dict["kwargs"]["model_cls"] = model_cls
+
+                import torch
+
+                seq_dict["kwargs"]["model_cls_kwargs"]["device"] = torch.device("cuda")
+
             sequence.append(seq_dict)
 
         sequence.append(
