@@ -191,16 +191,14 @@ class RayGPUStreamStep(Step):
 
                 from xinghe.ml.actor import ModelActor
 
-                seq_dict = (
-                    {
-                        "fn": ModelActor,
-                        "actor_num": 1,
-                        "kwargs": actor_kwargs_bert_1,
-                        "ray_remote_args": {
-                            "num_gpus": 1,
-                        },
+                seq_dict = {
+                    "fn": ModelActor,
+                    "actor_num": 1,
+                    "kwargs": actor_kwargs_bert_1,
+                    "ray_remote_args": {
+                        "num_gpus": 1,
                     },
-                )
+                }
 
             sequence.append(seq_dict)
 
