@@ -139,6 +139,9 @@ class RayGPUStreamStep(Step):
             }
 
             if seq_dict["fn"].operator_type == "gpu_model":
+                from xinghe.ml.actor import ModelActor
+
+                seq_dict["fn"] = ModelActor
                 logger.info(f"start model operation {seq_dict['kwargs']['model_cls']}")
 
                 model_cls_str = seq_dict["kwargs"]["model_cls"]
