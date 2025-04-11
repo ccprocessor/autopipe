@@ -128,9 +128,9 @@ class RayGPUStreamStep(Step):
         ]
 
         for op in ops:
-            if op["params"].get("operator_type", "") == "gpu_model":
-                import torch
-                from autopipe.pipeline.operator.gpu_op import ModelOperation
+            logger.info("start ray op construction")
+            import torch
+            from autopipe.pipeline.operator.gpu_op import ModelOperation
 
             seq_dict = {
                 "fn": get_operator(op["name"], op["params"]),
