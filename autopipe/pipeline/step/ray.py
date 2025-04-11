@@ -128,6 +128,10 @@ class RayGPUStreamStep(Step):
         ]
 
         for op in ops:
+            if op["params"].get("operator_type", "") == "gpu_model":
+                import torch
+                from autopipe.pipeline.operator.gpu_op import ModelOperation
+
             seq_dict = {
                 "fn": get_operator(op["name"], op["params"]),
                 "kwargs": op["params"].get("kwargs", {}),
@@ -139,9 +143,7 @@ class RayGPUStreamStep(Step):
                 model_cls = globals()[model_cls_str]
                 seq_dict["kwargs"]["model_cls"] = model_cls
 
-                # import torch
-
-                # seq_dict["kwargs"]["model_cls_kwargs"]["device"] = torch.device("cuda")
+                seq_dict["kwargs"]["model_cls_kwargs"]["device"] = torch.device("cuda")
 
             sequence.append(seq_dict)
 
