@@ -136,6 +136,10 @@ class RayGPUStreamStep(Step):
         for op in ops:
             logger.info("start ray op construction")
             import torch
+
+            print(torch.cuda.is_available())  # 应输出 True
+            print(torch.cuda.get_device_name(0))  # 显示 GPU 型号
+
             from autopipe.pipeline.operator.gpu_op import ModelOperation
 
             seq_dict = {
