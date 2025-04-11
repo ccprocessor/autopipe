@@ -1,7 +1,6 @@
 from autopipe.pipeline.operator.base import BaseOperation
 from autopipe.pipeline.operator.registry import register_operator
 from typing import Iterator, Dict, Any, Iterable, Optional, Type
-from xinghe.ml.actor import ModelActor
 
 
 @register_operator
