@@ -139,9 +139,13 @@ class RayGPUStreamStep(Step):
             }
 
             if seq_dict["fn"].operator_type == "gpu_model":
+                logger.info(f"start model operation {seq_dict['kwargs']['model_cls']}")
+
                 model_cls_str = seq_dict["kwargs"]["model_cls"]
                 model_cls = globals()[model_cls_str]
                 seq_dict["kwargs"]["model_cls"] = model_cls
+
+                logger.info(f"test model operation {seq_dict['kwargs']['model_cls']}")
 
                 seq_dict["kwargs"]["model_cls_kwargs"]["device"] = torch.device("cuda")
 
@@ -197,7 +201,6 @@ class RayGPUStreamStep(Step):
                     stop_event.set()
                     break
 
-        print("***************start ray sequence construction")
         sequence = self.construct_sequence(self.operators)
 
         logger.info(self.input_queue)

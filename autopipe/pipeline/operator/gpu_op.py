@@ -23,8 +23,12 @@ class ModelOperation(BaseOperation, ModelActor):
         dataloader_kwargs: dict = None,
         verbose: bool = False,
     ):
+        from loguru import logger
+
+        logger.info("start model operation init")
         # 初始化 BaseOperation
         BaseOperation.__init__(self, params_dict)
+        logger.info(f"model_cls: {model_cls}")
 
         # 初始化 ModelActor
         ModelActor.__init__(
