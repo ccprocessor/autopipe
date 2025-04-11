@@ -19,11 +19,17 @@ from typing import Iterator, Dict, Any, Iterable
 from loguru import logger
 import logging
 import ray
+from importlib import import_module
 
 import time
 import threading
 
 SIZE_2G = 2 << 30
+
+
+def get_model_class(model_cls_str):
+    module = import_module("xinghe.ml.model")
+    return getattr(module, model_cls_str)
 
 
 def read_func(
@@ -154,7 +160,7 @@ class RayGPUStreamStep(Step):
 
                 logger.info(f"model_cls_str: {model_cls_str}")
 
-                model_cls = globals()[model_cls_str]
+                model_cls = get_model_class(model_cls_str)
                 seq_dict["kwargs"]["model_cls"] = model_cls
 
                 logger.info(f"test model operation {seq_dict['kwargs']['model_cls']}")
