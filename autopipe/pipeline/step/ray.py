@@ -139,9 +139,9 @@ class RayGPUStreamStep(Step):
                 model_cls = globals()[model_cls_str]
                 seq_dict["kwargs"]["model_cls"] = model_cls
 
-                import torch
+                # import torch
 
-                seq_dict["kwargs"]["model_cls_kwargs"]["device"] = torch.device("cuda")
+                # seq_dict["kwargs"]["model_cls_kwargs"]["device"] = torch.device("cuda")
 
             sequence.append(seq_dict)
 
