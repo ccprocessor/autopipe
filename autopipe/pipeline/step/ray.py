@@ -152,6 +152,8 @@ class RayGPUStreamStep(Step):
                     XlmrMultiLabelProbModel,
                 )
 
+                logger.info(f"model_cls_str: {model_cls_str}")
+
                 model_cls = globals()[model_cls_str]
                 seq_dict["kwargs"]["model_cls"] = model_cls
 
