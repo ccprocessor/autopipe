@@ -152,7 +152,7 @@ class RayGPUStreamStep(Step):
                 from xinghe.ml.actor import ModelActor
 
                 seq_dict["fn"] = ModelActor
-                seq_dict["actor_num"] = (op["params"].get("actor_num", 1),)
+                seq_dict["actor_num"] = op["params"].get("actor_num", 1)
                 logger.info(f"start model operation {seq_dict['kwargs']['model_cls']}")
 
                 model_cls_str = seq_dict["kwargs"]["model_cls"]
