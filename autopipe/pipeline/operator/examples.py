@@ -123,12 +123,14 @@ class combine_label(BaseOperation):
         pass
 
     def handle(
-        data_iter: Iterable[dict], combing_cols, input_file, output_file
+        data_iter: Iterable[dict], combing_cols, output_path, input_file
     ):  # 明确声明接收可迭代的字典流
         if not input_file:
             raise SkipTask("missing [input_file]")
         if not is_s3_path(input_file):
             raise SkipTask(f"invalid input_file [{input_file}]")
+
+        output_file = output_path + "/" + input_file.split("/")[-1]
         if output_file and not is_s3_path(output_file):
             raise SkipTask(f"invalid output_file [{output_file}]")
 

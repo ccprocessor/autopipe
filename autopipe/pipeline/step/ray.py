@@ -148,6 +148,8 @@ class RayGPUStreamStep(Step):
                 "ray_remote_args": op["params"].get("ray_remote_args", {}),
             }
 
+            seq_dict["kwargs"]["output_path"] = self.output_path
+
             if seq_dict["fn"].operator_type == "gpu_model":
                 from xinghe.ml.actor import ModelActor
 
