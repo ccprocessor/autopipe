@@ -1,6 +1,15 @@
 from autopipe.pipeline.operator.base import BaseOperation
 from autopipe.pipeline.operator.registry import register_operator
 from typing import Iterator, Dict, Any, Iterable, Optional, Type
+from xinghe.s3 import (
+    S3DocWriter,
+    head_s3_object_with_retry,
+    is_s3_path,
+    put_s3_object_with_retry,
+    read_s3_rows,
+)
+from xinghe.utils.json_util import json_loads
+from xinghe.dp.base import SkipTask
 
 
 @register_operator
@@ -96,3 +105,37 @@ class Operation5(BaseOperation):
         for d in _iter:
             d = self.process(d)
             yield d
+
+
+class combine_label(BaseOperation):
+    """示例算子6"""
+
+    operator_name = "combine_label  "
+    operator_type = "default"
+
+    def process(self, data: dict) -> dict:
+        """处理单条数据"""
+        pass
+
+    def handle(
+        data_iter: Iterable[dict], combing_cols, input_file, output_file
+    ):  # 明确声明接收可迭代的字典流
+        if not input_file:
+            raise SkipTask("missing [input_file]")
+        if not is_s3_path(input_file):
+            raise SkipTask(f"invalid input_file [{input_file}]")
+        if output_file and not is_s3_path(output_file):
+            raise SkipTask(f"invalid output_file [{output_file}]")
+
+        input_head = head_s3_object_with_retry(input_file)
+        if not input_head:
+            raise SkipTask(f"file [{input_file}] not found")
+
+        use_stream = 2 << 30
+
+        input_file_rows = read_s3_rows(input_file, use_stream)
+
+        for d1, d2 in zip(data_iter, input_file_rows):
+            d2 = json_loads(d2.value)
+            d2.update(d1)
+            yield d2
