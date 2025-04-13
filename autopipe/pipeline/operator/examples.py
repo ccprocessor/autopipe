@@ -107,6 +107,7 @@ class Operation5(BaseOperation):
             yield d
 
 
+@register_operator
 class combine_label(BaseOperation):
     """示例算子6"""
 
