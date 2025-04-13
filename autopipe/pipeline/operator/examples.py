@@ -114,6 +114,10 @@ class combine_label(BaseOperation):
     operator_name = "combine_label"
     operator_type = "default"
 
+    def resource_load(self):
+        """加载资源"""
+        pass
+
     def process(self, data: dict) -> dict:
         """处理单条数据"""
         pass
