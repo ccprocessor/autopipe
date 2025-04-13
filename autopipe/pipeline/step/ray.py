@@ -172,34 +172,36 @@ class RayGPUStreamStep(Step):
                 seq_dict["kwargs"]["model_cls_kwargs"]["device"] = torch.device("cuda")
                 logger.info(seq_dict)
 
-                # actor_kwargs_bert_1 = {
-                #     "model_cls": BertTwoClassModel,
-                #     "model_cls_kwargs": {
-                #         "config": {
-                #             "model_name": "bert_fluency_1118",
-                #             "model_path": "/share/sufutao/model/bert_fluency_1118",
-                #             "num_gpus": 1,
-                #             "include_fields": [
-                #                 "content",
-                #                 "Qwen2.5-72B-Instruct_response",
-                #                 "bert_fluency_1118_prob",
-                #             ],
-                #         },
-                #         "device": torch.device("cuda"),
-                #     },
-                #     "batch_size": 64,
-                # }
+                actor_kwargs_bert_1 = {
+                    "model_cls": BertTwoClassModel,
+                    "model_cls_kwargs": {
+                        "config": {
+                            "model_name": "bert_fluency_1118",
+                            "model_path": "/share/sufutao/model/bert_fluency_1118",
+                            "num_gpus": 1,
+                            "include_fields": [
+                                "content",
+                                "Qwen2.5-72B-Instruct_response",
+                                "bert_fluency_1118_prob",
+                            ],
+                        },
+                        "device": torch.device("cuda"),
+                    },
+                    "batch_size": 64,
+                }
 
-                # from xinghe.ml.actor import ModelActor
+                from xinghe.ml.actor import ModelActor
 
-                # seq_dict = {
-                #     "fn": ModelActor,
-                #     "actor_num": 1,
-                #     "kwargs": actor_kwargs_bert_1,
-                #     "ray_remote_args": {
-                #         "num_gpus": 1,
-                #     },
-                # }
+                seq_dict_2 = {
+                    "fn": ModelActor,
+                    "actor_num": 1,
+                    "kwargs": actor_kwargs_bert_1,
+                    "ray_remote_args": {
+                        "num_gpus": 1,
+                    },
+                }
+
+                logger.info(seq_dict_2)
 
             sequence.append(seq_dict)
 
