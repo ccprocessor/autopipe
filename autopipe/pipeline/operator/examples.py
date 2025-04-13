@@ -123,7 +123,7 @@ class combine_label(BaseOperation):
         pass
 
     def handle(
-        data_iter: Iterable[dict], combing_cols, output_path, input_file
+        data_iter: Iterable[dict], input_file, combing_cols=None, output_path=None
     ):  # 明确声明接收可迭代的字典流
         if not input_file:
             raise SkipTask("missing [input_file]")
