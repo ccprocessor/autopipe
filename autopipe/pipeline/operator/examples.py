@@ -111,7 +111,7 @@ class Operation5(BaseOperation):
 class combine_label(BaseOperation):
     """示例算子6"""
 
-    operator_name = "combine_label  "
+    operator_name = "combine_label"
     operator_type = "default"
 
     def process(self, data: dict) -> dict:
