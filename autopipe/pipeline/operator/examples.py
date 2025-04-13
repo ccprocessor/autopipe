@@ -137,5 +137,6 @@ class combine_label(BaseOperation):
 
         for d1, d2 in zip(data_iter, input_file_rows):
             d2 = json_loads(d2.value)
-            d2.update(d1)
+            for col in combing_cols:
+                d2[col] = d1[col]
             yield d2
