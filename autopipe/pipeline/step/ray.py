@@ -20,6 +20,7 @@ from loguru import logger
 import logging
 import ray
 from importlib import import_module
+from xinghe.io.kafka import KafkaWriter
 
 import time
 import threading
@@ -87,6 +88,10 @@ def write_func(
     input_count = file_meta_client.get_step_field(step_id, "input_count")
     step_progress = file_meta_client.get_step_progress(step_id)
     print(f"input_count: {input_count}, step_progress: {step_progress}")
+
+    kafka_writer = KafkaWriter(output_queue)
+    kafka_writer.write({"id": output_file, "input_file": output_file})
+    kafka_writer.flush()
 
     if input_count == step_progress:
         file_meta_client.set_step_state(step_id, StepState.SUCCESS)
