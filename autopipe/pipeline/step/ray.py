@@ -140,7 +140,7 @@ class RayGPUStreamStep(Step):
             # print(torch.cuda.is_available())  # 应输出 True
             # print(torch.cuda.get_device_name(0))  # 显示 GPU 型号
 
-            from autopipe.pipeline.operator.gpu_op import ModelOperation
+            from autopipe.pipeline.operator.gpu_op import MinerUExtract, ModelOperation
 
             seq_dict = {
                 "fn": get_operator(op["name"], op["params"]),
