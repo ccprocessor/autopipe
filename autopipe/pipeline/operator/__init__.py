@@ -10,6 +10,7 @@ from autopipe.pipeline.operator.examples import (
     Operation3,
     Operation4,
 )
+from autopipe.pipeline.operator.gpu_op import MinerUExtract
 
 __all__ = [
     "BaseOperation",
@@ -20,4 +21,5 @@ __all__ = [
     "Operation3",
     "Operation4",
     "CleanModelDemo",
+    "MinerUExtract",
 ]

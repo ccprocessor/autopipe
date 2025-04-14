@@ -88,11 +88,11 @@ def extract_pdf_content(d: dict, output_path: str) -> Iterable:
 
 
 @register_operator
-class mineru_extract(BaseOperation):
+class MinerUExtract(BaseOperation):
     """示例算子6"""
 
     operator_name = "mineru_extract"
-    operator_type = "default"
+    operator_type = "gpu_model"
 
     def resource_load(self):
         """加载资源"""
