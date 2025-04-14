@@ -62,7 +62,7 @@ def extract_pdf_content(d: dict, output_path: str) -> Iterable:
     except Exception as e:
         d["_error"] = "read_error"
         d["_error_msg"] = str(e)
-        yield d
+        return d
 
     ds = PymuDocDataset(pdf_bytes)
 
@@ -84,7 +84,7 @@ def extract_pdf_content(d: dict, output_path: str) -> Iterable:
     content_list_content = pipe_result.get_content_list(s3_img_path_folder)
 
     d["content_list"] = content_list_content
-    yield d
+    return d
 
 
 @register_operator
