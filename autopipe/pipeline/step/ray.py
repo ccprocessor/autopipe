@@ -150,7 +150,7 @@ class RayGPUStreamStep(Step):
 
             seq_dict["kwargs"]["output_path"] = self.output_path
 
-            if seq_dict["fn"].operator_type == "gpu_model":
+            if seq_dict["fn"].operator_name == "model_operator":
                 from xinghe.ml.actor import ModelActor
 
                 seq_dict["fn"] = ModelActor

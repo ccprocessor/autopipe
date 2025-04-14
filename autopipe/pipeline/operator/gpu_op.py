@@ -2,6 +2,24 @@ from autopipe.pipeline.operator.base import BaseOperation
 from autopipe.pipeline.operator.registry import register_operator
 from typing import Iterator, Dict, Any, Iterable, Optional, Type
 from xinghe.ml.actor import ModelActor
+from xinghe.s3 import (
+    S3DocWriter,
+    head_s3_object_with_retry,
+    is_s3_path,
+    put_s3_object_with_retry,
+    read_s3_rows,
+    read_s3_object_bytes,
+)
+from xinghe.utils.json_util import json_loads
+from xinghe.dp.base import SkipTask
+
+from typing import Iterable
+from xinghe.ops.pdf import PdfProcessor, PageRange, S3Writer
+from xinghe.ops.file import RecordHandler
+from xinghe.dp.ray import RayTaskExecutor
+from magic_pdf.data.dataset import PymuDocDataset
+from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
+from magic_pdf.config.enums import SupportedPdfParseMethod
 
 
 @register_operator
@@ -27,3 +45,75 @@ class ModelOperation(BaseOperation, ModelActor):
 
     def resource_load(self):
         pass
+
+
+def extract_pdf_content(d: dict, output_path: str) -> Iterable:
+    s3_img_path = output_path + "/images/"
+
+    path = d["path"]
+    track_id = d["track_id"]
+
+    s3_img_path_folder = s3_img_path + "/" + track_id + "/"
+    image_writer = S3Writer(path)
+
+    pdf_bytes = None
+    try:
+        pdf_bytes = read_s3_object_bytes(path)
+    except Exception as e:
+        d["_error"] = "read_error"
+        d["_error_msg"] = str(e)
+        yield d
+
+    ds = PymuDocDataset(pdf_bytes)
+
+    if ds.classify() == SupportedPdfParseMethod.OCR:
+        infer_result = ds.apply(doc_analyze, ocr=True)
+
+        ## pipeline
+        pipe_result = infer_result.pipe_ocr_mode(image_writer)
+
+    else:
+        infer_result = ds.apply(doc_analyze, ocr=False)
+
+        ## pipeline
+        pipe_result = infer_result.pipe_txt_mode(image_writer)
+
+    pipe_results = []
+    pipe_results.append(pipe_result)
+
+    content_list_content = pipe_result.get_content_list(s3_img_path_folder)
+
+    d["content_list"] = content_list_content
+    yield d
+
+
+@register_operator
+class mineru_extract(BaseOperation):
+    """示例算子6"""
+
+    operator_name = "mineru_extract"
+    operator_type = "default"
+
+    def resource_load(self):
+        """加载资源"""
+        pass
+
+    def process(self, data: dict) -> dict:
+        """处理单条数据"""
+        pass
+
+    def handle(
+        self, data_iter: Iterable[dict], input_file, output_path
+    ) -> Iterable:  # 明确声明接收可迭代的字典流
+        if not input_file:
+            raise SkipTask("missing [input_file]")
+        if not is_s3_path(input_file):
+            raise SkipTask(f"invalid input_file [{input_file}]")
+
+        input_head = head_s3_object_with_retry(input_file)
+        if not input_head:
+            raise SkipTask(f"file [{input_file}] not found")
+
+        for d in data_iter:
+            d = json_loads(d.value)
+            yield extract_pdf_content(d, output_path)
