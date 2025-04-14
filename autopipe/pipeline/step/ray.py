@@ -84,14 +84,15 @@ def write_func(
         writer.write(d)
 
     writer.flush()
-    file_meta_client.update_step_progress(step_id, output_file)
-    input_count = file_meta_client.get_step_field(step_id, "input_count")
-    step_progress = file_meta_client.get_step_progress(step_id)
-    print(f"input_count: {input_count}, step_progress: {step_progress}")
 
     kafka_writer = KafkaWriter(output_queue)
     kafka_writer.write({"id": output_file, "input_file": output_file})
     kafka_writer.flush()
+
+    file_meta_client.update_step_progress(step_id, output_file)
+    input_count = file_meta_client.get_step_field(step_id, "input_count")
+    step_progress = file_meta_client.get_step_progress(step_id)
+    print(f"input_count: {input_count}, step_progress: {step_progress}")
 
     if input_count == step_progress:
         file_meta_client.set_step_state(step_id, StepState.SUCCESS)
