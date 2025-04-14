@@ -115,5 +115,5 @@ class MinerUExtract(BaseOperation):
             raise SkipTask(f"file [{input_file}] not found")
 
         for d in data_iter:
-            d = json_loads(d.value)
+            # d = json_loads(d.value)
             yield extract_pdf_content(d, output_path)
