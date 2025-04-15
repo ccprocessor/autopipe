@@ -1,8 +1,9 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 from datetime import datetime
 import string
 import random
 from autopipe.pipeline.step.base import Step
+from autopipe.config.base import ConfigLoader
 import time
 from multiprocessing import Process
 from autopipe.pipeline.step.base import StepState
@@ -28,8 +29,13 @@ def human_readable_id():
 class Pipeline:
     """协调数据处理流程的核心类"""
 
-    def __init__(self, config: Dict, pipeline_id: str = None):
-        self.config = config
+    def __init__(self, config: Union[Dict, str], pipeline_id: str = None):
+        if isinstance(config, str):
+            pipeline_config = ConfigLoader(config)
+            self.config = pipeline_config
+        else:
+            self.config = config
+
         # storage
         self.meta_config = config.meta_storage
         self.storage = get_storage(self.meta_config)
