@@ -31,8 +31,8 @@ class Pipeline:
 
     def __init__(self, config: Union[Dict, str], pipeline_id: str = None):
         if isinstance(config, str):
-            pipeline_config = ConfigLoader(config)
-            self.config = pipeline_config
+            config = ConfigLoader(config)
+            self.config = config
         else:
             self.config = config
 
