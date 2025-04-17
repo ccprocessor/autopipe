@@ -17,9 +17,13 @@ from typing import Iterable
 from xinghe.ops.pdf import PdfProcessor, PageRange, S3Writer
 from xinghe.ops.file import RecordHandler
 from xinghe.dp.ray import RayTaskExecutor
+from xinghe.s3.path import split_s3_path
 from magic_pdf.data.dataset import PymuDocDataset
 from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
 from magic_pdf.config.enums import SupportedPdfParseMethod
+from magic_pdf.data.data_reader_writer import S3DataReader, S3DataWriter
+
+import os
 
 
 @register_operator
@@ -47,13 +51,19 @@ class ModelOperation(BaseOperation, ModelActor):
         pass
 
 
-def extract_pdf_content(d: dict, output_path: str) -> Iterable:
-    s3_img_path = output_path + "/images/"
+def extract_pdf_content(
+    d: dict, output_ak: str, output_sk: str, output_endpoint: str, output_path: str
+) -> Iterable:
+    output_bucket, output_prefix = split_s3_path(output_path)
+    s3_img_prefix = os.path.join(output_prefix, "images")
+
+    image_writer = image_writer = S3DataWriter(
+        s3_img_prefix, output_bucket, output_ak, output_sk, output_endpoint
+    )
 
     path = d["path"]
     track_id = d["track_id"]
 
-    s3_img_path_folder = s3_img_path + "/" + track_id + "/"
     image_writer = S3Writer(path)
 
     pdf_bytes = None
@@ -62,6 +72,11 @@ def extract_pdf_content(d: dict, output_path: str) -> Iterable:
     except Exception as e:
         d["_error"] = "read_error"
         d["_error_msg"] = str(e)
+        return d
+
+    if pdf_bytes is None:
+        d["_error"] = "read_error"
+        d["_error_msg"] = "pdf_bytes is None"
         return d
 
     ds = PymuDocDataset(pdf_bytes)
@@ -81,7 +96,7 @@ def extract_pdf_content(d: dict, output_path: str) -> Iterable:
     pipe_results = []
     pipe_results.append(pipe_result)
 
-    content_list_content = pipe_result.get_content_list(s3_img_path_folder)
+    content_list_content = pipe_result.get_content_list(s3_img_prefix)
 
     d["content_list"] = content_list_content
     return d
