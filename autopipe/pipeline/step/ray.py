@@ -170,11 +170,14 @@ class RayGPUStreamStep(Step):
                     TemplateLmDeployTextGenModel,
                     XlmrMultiLabelProbModel,
                 )
+                from ..operator.gpu_op import XlmrRegressionModel
 
                 logger.info(f"model_cls_str: {model_cls_str}")
-
-                model_cls = get_model_class(model_cls_str)
-                seq_dict["kwargs"]["model_cls"] = model_cls
+                if model_cls_str == "XlmrRegressionModel":
+                    seq_dict["kwargs"]["model_cls"] = XlmrRegressionModel
+                else:
+                    model_cls = get_model_class(model_cls_str)
+                    seq_dict["kwargs"]["model_cls"] = model_cls
 
                 # logger.info(f"test model operation {seq_dict['kwargs']['model_cls']}")
 

@@ -1,7 +1,8 @@
 from autopipe.pipeline.operator.base import BaseOperation
 from autopipe.pipeline.operator.registry import register_operator
-from typing import Iterator, Dict, Any, Iterable, Optional, Type
+from typing import Iterator, Dict, Any, Iterable, Optional, Type, List
 from xinghe.ml.actor import ModelActor
+from xinghe.ml.model import BertModel
 from xinghe.s3 import (
     S3DocWriter,
     head_s3_object_with_retry,
@@ -20,6 +21,8 @@ from xinghe.dp.ray import RayTaskExecutor
 from magic_pdf.data.dataset import PymuDocDataset
 from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
 from magic_pdf.config.enums import SupportedPdfParseMethod
+
+import torch
 
 
 @register_operator
@@ -117,3 +120,37 @@ class MinerUExtract(BaseOperation):
         for d in data_iter:
             # d = json_loads(d.value)
             yield extract_pdf_content(d, output_path)
+            
+class XlmrRegressionModel(BertModel):
+    pad_token_id=1  # copied from BertModel and modified
+
+    def __init__(self, config, device=None):
+        super().__init__(config, device)
+        self.prob_key = self.get_output_key("prob")
+
+    def load_tokenizer(self):
+        import logging
+
+        from transformers import XLMRobertaTokenizerFast
+
+        # sometimes, we use this tokenizer to get tail_tokens, so we suppress following warning:
+        # `Token indices sequence length is longer than the specified maximum sequence length...`
+        logging.getLogger("transformers.tokenization_utils_base").setLevel(logging.ERROR)
+        return XLMRobertaTokenizerFast.from_pretrained(self.model_path)
+
+    
+    def load_model(self):
+        from transformers import XLMRobertaForSequenceClassification
+        model = XLMRobertaForSequenceClassification.from_pretrained(self.model_path)
+        return self._config_bert_model(model)
+
+    def inference(self, batch:dict) -> List[dict]:
+        batch={k: t.to(self.device) for k, t in batch.items()}
+        print(f"batch: {batch}")
+        with torch.no_grad():
+            outputs=self.model(**batch)
+            logits=outputs.logits
+            pos_probs = logits.detach().cpu().numpy().clip(min=0, max=1)
+
+            return [{self.prob_key: round(float(p), 6)} for p in pos_probs]
+
