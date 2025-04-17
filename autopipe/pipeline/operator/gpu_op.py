@@ -118,7 +118,13 @@ class MinerUExtract(BaseOperation):
         pass
 
     def handle(
-        self, data_iter: Iterable[dict], input_file, output_path
+        self,
+        data_iter: Iterable[dict],
+        input_file,
+        output_ak,
+        output_sk,
+        output_endpoint,
+        output_path,
     ) -> Iterable:  # 明确声明接收可迭代的字典流
         if not input_file:
             raise SkipTask("missing [input_file]")
@@ -131,4 +137,6 @@ class MinerUExtract(BaseOperation):
 
         for d in data_iter:
             # d = json_loads(d.value)
-            yield extract_pdf_content(d, output_path)
+            yield extract_pdf_content(
+                d, output_ak, output_sk, output_endpoint, output_path
+            )
