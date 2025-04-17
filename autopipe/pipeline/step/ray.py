@@ -165,15 +165,9 @@ class RayGPUStreamStep(Step):
 
                 model_cls_str = seq_dict["kwargs"]["model_cls"]
 
-                from xinghe.ml.model import (
-                    BertTwoClassModel,
-                    TemplateLmDeployTextGenModel,
-                    XlmrMultiLabelProbModel,
-                )
-                from ..operator.gpu_op import XlmrRegressionModel
-
                 logger.info(f"model_cls_str: {model_cls_str}")
                 if model_cls_str == "XlmrRegressionModel":
+                    from ..operator.gpu_model_op import XlmrRegressionModel
                     seq_dict["kwargs"]["model_cls"] = XlmrRegressionModel
                 else:
                     model_cls = get_model_class(model_cls_str)
