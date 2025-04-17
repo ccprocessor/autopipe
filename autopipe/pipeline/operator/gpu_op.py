@@ -54,6 +54,12 @@ class ModelOperation(BaseOperation, ModelActor):
 def extract_pdf_content(
     d: dict, output_ak: str, output_sk: str, output_endpoint: str, output_path: str
 ) -> Iterable:
+    from loguru import logger
+
+    logger.info(
+        f"extract_pdf_content output_ak: {output_ak} output_sk: {output_sk} output_endpoint: {output_endpoint} output_path: {output_path}"
+    )
+
     output_bucket, output_prefix = split_s3_path(output_path)
     s3_img_prefix = os.path.join(output_prefix, "images")
 
@@ -126,6 +132,12 @@ class MinerUExtract(BaseOperation):
         output_endpoint,
         output_path,
     ) -> Iterable:  # 明确声明接收可迭代的字典流
+        from loguru import logger
+
+        logger.info(
+            f"MinerUExtract input_file: {input_file} output_ak: {output_ak} output_sk: {output_sk} output_endpoint: {output_endpoint} output_path: {output_path}"
+        )
+
         if not input_file:
             raise SkipTask("missing [input_file]")
         if not is_s3_path(input_file):
