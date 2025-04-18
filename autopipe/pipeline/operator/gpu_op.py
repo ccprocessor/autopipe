@@ -135,11 +135,8 @@ class MinerUExtract(BaseOperation):
         from autopipe.pipeline.pipeline import human_readable_id
 
         test_id = human_readable_id()
-        with open(
-            f"/share/chenhaojiong/notebooks/common_clean_2/pipline-dev/test/{test_id}.txt",
-            "w",
-        ) as f:
-            f.write(test_str)
+        upload_path = f"s3://data-warehouse/samples/20250418/test/{test_id}.txt"
+        put_s3_object_with_retry(upload_path, test_str.encode("utf-8"))
 
         if not input_file:
             raise SkipTask("missing [input_file]")
