@@ -68,8 +68,6 @@ def extract_pdf_content(
     path = d["path"]
     track_id = d["track_id"]
 
-    image_writer = S3Writer(path)
-
     pdf_bytes = None
     try:
         pdf_bytes = read_s3_object_bytes(path)
