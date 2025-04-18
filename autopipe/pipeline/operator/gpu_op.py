@@ -73,6 +73,7 @@ def extract_pdf_content(
     pdf_bytes = None
     try:
         pdf_bytes = read_s3_object_bytes(path)
+        print(f"track_id: {track_id} pdf_bytes: {pdf_bytes}")
     except Exception as e:
         d["_error"] = "read_error"
         d["_error_msg"] = str(e)
@@ -130,13 +131,13 @@ class MinerUExtract(BaseOperation):
         output_endpoint,
         output_path,
     ) -> Iterable:  # 明确声明接收可迭代的字典流
-        test_str = f"MinerUExtract input_file: {input_file} output_ak: {output_ak} output_sk: {output_sk} output_endpoint: {output_endpoint} output_path: {output_path}"
+        # test_str = f"MinerUExtract input_file: {input_file} output_ak: {output_ak} output_sk: {output_sk} output_endpoint: {output_endpoint} output_path: {output_path}"
 
-        from autopipe.pipeline.pipeline import human_readable_id
+        # from autopipe.pipeline.pipeline import human_readable_id
 
-        test_id = human_readable_id()
-        upload_path = f"s3://data-warehouse/samples/20250418/test/{test_id}.txt"
-        put_s3_object_with_retry(upload_path, test_str.encode("utf-8"))
+        # test_id = human_readable_id()
+        # upload_path = f"s3://data-warehouse/samples/20250418/test/{test_id}.txt"
+        # put_s3_object_with_retry(upload_path, test_str.encode("utf-8"))
 
         if not input_file:
             raise SkipTask("missing [input_file]")
