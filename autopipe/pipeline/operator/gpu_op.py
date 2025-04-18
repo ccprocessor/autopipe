@@ -71,7 +71,7 @@ def extract_pdf_content(
     pdf_bytes = None
     try:
         pdf_bytes = read_s3_object_bytes(path)
-        print(f"track_id: {track_id} pdf_bytes: {pdf_bytes}")
+        print(f"track_id: {track_id} pdf_bytes: {len(pdf_bytes)}")
     except Exception as e:
         d["_error"] = "read_error"
         d["_error_msg"] = str(e)
