@@ -130,9 +130,16 @@ class MinerUExtract(BaseOperation):
         output_endpoint,
         output_path,
     ) -> Iterable:  # 明确声明接收可迭代的字典流
-        print(
-            f"MinerUExtract input_file: {input_file} output_ak: {output_ak} output_sk: {output_sk} output_endpoint: {output_endpoint} output_path: {output_path}"
-        )
+        test_str = f"MinerUExtract input_file: {input_file} output_ak: {output_ak} output_sk: {output_sk} output_endpoint: {output_endpoint} output_path: {output_path}"
+
+        from autopipe.pipeline.pipeline import human_readable_id
+
+        test_id = human_readable_id()
+        with open(
+            f"/share/chenhaojiong/notebooks/common_clean_2/pipline-dev/test/{test_id}.txt",
+            "w",
+        ) as f:
+            f.write(test_str)
 
         if not input_file:
             raise SkipTask("missing [input_file]")
